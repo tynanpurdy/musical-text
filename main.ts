@@ -15,7 +15,7 @@ import {
 	RangeSetBuilder,
 } from "@codemirror/state";
 
-interface SentenceHighlighterSettings {
+interface MusicalTextSettings {
 	shortSentenceColor: string;
 	mediumSentenceColor: string;
 	longSentenceColor: string;
@@ -25,12 +25,12 @@ interface SentenceHighlighterSettings {
 	defaultHighlightingEnabled: boolean;
 }
 
-const DEFAULT_SETTINGS: SentenceHighlighterSettings = {
+const DEFAULT_SETTINGS: MusicalTextSettings = {
 	shortSentenceColor: "#e3f2fd", // light blue
 	mediumSentenceColor: "#fff3e0", // light orange
 	longSentenceColor: "#ffebee", // light red
-	shortThreshold: 10, // words
-	longThreshold: 25, // words
+	shortThreshold: 3, // words
+	longThreshold: 7, // words
 	defaultHighlightingEnabled: false,
 };
 
@@ -58,7 +58,7 @@ const sentenceHighlighterField = StateField.define<RangeSet<Decoration>>({
  * A live update extension that recalculates decorations on document changes.
  * Note: It consults a per-editor state (a WeakMap) to see whether highlighting is enabled.
  */
-function liveHighlightExtension(plugin: SentenceHighlighterPlugin) {
+function liveHighlightExtension(plugin: MusicalTextPlugin) {
 	return EditorView.updateListener.of((update) => {
 		// Look up the current view's enabled state.
 		const enabled = plugin.editorHighlightingMap.get(update.view);
@@ -71,8 +71,8 @@ function liveHighlightExtension(plugin: SentenceHighlighterPlugin) {
 	});
 }
 
-export default class SentenceHighlighterPlugin extends Plugin {
-	settings: SentenceHighlighterSettings;
+export default class MusicalTextPlugin extends Plugin {
+	settings: MusicalTextSettings;
 	// This WeakMap holds the highlighting state (true/false) for each CodeMirror view.
 	editorHighlightingMap: WeakMap<EditorView, boolean>;
 
@@ -138,7 +138,7 @@ export default class SentenceHighlighterPlugin extends Plugin {
 
 	private updateStatusBar(statusBarItem: HTMLElement) {
 		statusBarItem.empty();
-		setIcon(statusBarItem, "highlighter");
+		setIcon(statusBarItem, "list-music");
 		// Determine the state for the active editor.
 		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 		let enabled = false;
@@ -146,9 +146,6 @@ export default class SentenceHighlighterPlugin extends Plugin {
 			const cm: EditorView = (activeView.editor as any).cm;
 			enabled = this.editorHighlightingMap.get(cm) || false;
 		}
-		statusBarItem.createSpan({
-			text: enabled ? " Highlighting On" : " Highlighting Off",
-		});
 		statusBarItem.title = "Click to toggle sentence highlighting for this editor";
 		statusBarItem.toggleClass("is-active", enabled);
 	}
@@ -234,7 +231,7 @@ export default class SentenceHighlighterPlugin extends Plugin {
 /**
  * Computes a RangeSet of decorations based on sentence boundaries.
  */
-function computeDecorations(text: string, settings: SentenceHighlighterSettings): RangeSet<Decoration> {
+function computeDecorations(text: string, settings: MusicalTextSettings): RangeSet<Decoration> {
 	const builder = new RangeSetBuilder<Decoration>();
 	// Use regex.exec to capture sentence boundaries
 	const regex = /[^.!?]+[.!?]+/g;
@@ -256,7 +253,7 @@ function countWords(sentence: string): number {
 	return (sentence.match(/\b\w+\b/g) || []).length;
 }
 
-function getClassForSentence(wordCount: number, settings: SentenceHighlighterSettings): string {
+function getClassForSentence(wordCount: number, settings: MusicalTextSettings): string {
 	if (wordCount <= settings.shortThreshold) {
 		return "sh-short";
 	} else if (wordCount >= settings.longThreshold) {
@@ -266,15 +263,15 @@ function getClassForSentence(wordCount: number, settings: SentenceHighlighterSet
 }
 
 class SentenceHighlighterSettingTab extends PluginSettingTab {
-	plugin: SentenceHighlighterPlugin;
-	constructor(app: App, plugin: SentenceHighlighterPlugin) {
+	plugin: MusicalTextPlugin;
+	constructor(app: App, plugin: MusicalTextPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-		containerEl.createEl("h2", { text: "Sentence Highlighter Settings" });
+		// containerEl.createEl("h2", { text: "Musical Text" });
 		new Setting(containerEl)
 			.setName("Short sentence threshold")
 			.setDesc("Number of words or less to be considered a short sentence")
