@@ -15,6 +15,10 @@ import {
 	RangeSetBuilder,
 } from "@codemirror/state";
 
+/**
+ * Settings interface for the Musical Text plugin.
+ * Defines color schemes and thresholds for sentence highlighting.
+ */
 interface MusicalTextSettings {
 	shortSentenceColor: string;
 	mediumSentenceColor: string;
@@ -25,6 +29,10 @@ interface MusicalTextSettings {
 	defaultHighlightingEnabled: boolean;
 }
 
+/**
+ * Default settings for the Musical Text plugin.
+ * Provides initial values for colors and thresholds.
+ */
 const DEFAULT_SETTINGS: MusicalTextSettings = {
 	shortSentenceColor: "#e3f2fd", // light blue
 	mediumSentenceColor: "#fff3e0", // light orange
@@ -35,12 +43,15 @@ const DEFAULT_SETTINGS: MusicalTextSettings = {
 };
 
 /**
- * CODEMIRROR EXTENSIONS
- * 
- * 1. A StateField that holds our current decoration set.
- * 2. A StateEffect to update that set.
+ * CodeMirror state effect for updating sentence highlighting decorations.
+ * Used to dispatch decoration updates to the editor view.
  */
 const sentenceHighlightEffect = StateEffect.define<RangeSet<Decoration>>();
+
+/**
+ * CodeMirror state field that maintains the current set of sentence decorations.
+ * Handles creation, updates, and provides decorations to the editor view.
+ */
 const sentenceHighlighterField = StateField.define<RangeSet<Decoration>>({
 	create: () => RangeSet.empty,
 	update(decorations, tr) {
@@ -55,22 +66,52 @@ const sentenceHighlighterField = StateField.define<RangeSet<Decoration>>({
 });
 
 /**
- * A live update extension that recalculates decorations on document changes.
- * Note: It consults a per-editor state (a WeakMap) to see whether highlighting is enabled.
+ * Creates a CodeMirror extension that updates sentence highlighting in real-time.
+ * Responds to document changes and viewport updates to maintain accurate highlighting.
+ * @param plugin Reference to the plugin instance for accessing settings and state
+ * @returns An EditorView.updateListener extension
  */
 function liveHighlightExtension(plugin: MusicalTextPlugin) {
 	return EditorView.updateListener.of((update) => {
 		// Look up the current view's enabled state.
 		const enabled = plugin.editorHighlightingMap.get(update.view);
 		if (!enabled) return;
-		if (update.docChanged) {
-			const text = update.state.doc.toString();
-			const decorations = computeDecorations(text, plugin.settings);
-			update.view.dispatch({ effects: sentenceHighlightEffect.of(decorations) });
+
+		// Update decorations if the document changed OR the viewport changed
+		if (update.docChanged || update.viewportChanged) {
+			const builder = new RangeSetBuilder<Decoration>();
+
+			// Process only visible ranges
+			for (const range of update.view.visibleRanges) {
+				const visibleText = update.state.doc.sliceString(
+					range.from,
+					range.to
+				);
+				const decorations = computeDecorations(
+					visibleText,
+					plugin.settings,
+					range.from
+				);
+
+				const iter = decorations.iter();
+				while (iter.value) {
+					builder.add(iter.from, iter.to, iter.value);
+					iter.next();
+				}
+			}
+
+			const fullDecorations = builder.finish();
+			update.view.dispatch({
+				effects: sentenceHighlightEffect.of(fullDecorations),
+			});
 		}
 	});
 }
 
+/**
+ * Main plugin class for the Musical Text feature.
+ * Handles initialization, state management, and editor interactions for sentence highlighting.
+ */
 export default class MusicalTextPlugin extends Plugin {
 	settings: MusicalTextSettings;
 	// This WeakMap holds the highlighting state (true/false) for each CodeMirror view.
@@ -110,7 +151,8 @@ export default class MusicalTextPlugin extends Plugin {
 		// When switching views, update the status bar and refresh highlighting for the active editor.
 		this.registerEvent(
 			this.app.workspace.on("active-leaf-change", () => {
-				const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				const activeView =
+					this.app.workspace.getActiveViewOfType(MarkdownView);
 				this.updateStatusBar(statusBarItem);
 				if (activeView) {
 					const cm: EditorView = (activeView.editor as any).cm;
@@ -119,81 +161,173 @@ export default class MusicalTextPlugin extends Plugin {
 						this.refreshHighlighting(activeView.editor);
 					} else {
 						// Ensure that if highlighting is disabled, we clear any decorations.
-						cm.dispatch({ effects: sentenceHighlightEffect.of(RangeSet.empty) });
+						cm.dispatch({
+							effects: sentenceHighlightEffect.of(RangeSet.empty),
+						});
 					}
 				}
 			})
-		);		
+		);
 
 		// Initialize the active editor's highlighting state to the default.
 		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (activeView) {
 			const cm: EditorView = (activeView.editor as any).cm;
-			this.editorHighlightingMap.set(cm, this.settings.defaultHighlightingEnabled);
+			this.editorHighlightingMap.set(
+				cm,
+				this.settings.defaultHighlightingEnabled
+			);
 			if (this.settings.defaultHighlightingEnabled) {
 				this.refreshHighlighting(activeView.editor);
 			}
 		}
 	}
 
-	private updateStatusBar(statusBarItem: HTMLElement) {
-		statusBarItem.empty();
-		setIcon(statusBarItem, "list-music");
-		// Determine the state for the active editor.
+	/**
+	 * Returns the active editor from the active MarkdownView.
+	 */
+	private getEditorFromActiveView(): Editor | null {
 		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-		let enabled = false;
-		if (activeView) {
-			const cm: EditorView = (activeView.editor as any).cm;
-			enabled = this.editorHighlightingMap.get(cm) || false;
+		return activeView ? activeView.editor : null;
+	}
+
+	/**
+	 * Helper method to get the EditorView from either an Editor instance or from the active view
+	 * @param editor Optional editor instance. If not provided, gets from active view
+	 * @returns EditorView instance or null if not found
+	 */
+	private getEditorView(editor?: Editor): EditorView | null {
+		if (editor) {
+			return (editor as any).cm;
 		}
-		statusBarItem.title = "Click to toggle sentence highlighting for this editor";
-		statusBarItem.toggleClass("is-active", enabled);
+
+		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		return activeView ? (activeView.editor as any).cm : null;
+	}
+
+	/**
+	 * Updates the highlighting state for a given editor.
+	 * @param editor The editor whose state to update.
+	 * @param newState The new highlighting state.
+	 */
+	private updateHighlightingState(editor: Editor, newState: boolean): void {
+		const cm = this.getEditorView(editor);
+		if (cm) {
+			this.editorHighlightingMap.set(cm, newState);
+		}
+	}
+
+	/**
+	 * Applies highlighting or clears decorations based on the provided state.
+	 * @param editor The editor to update.
+	 * @param state True to refresh highlighting; false to clear decorations.
+	 */
+	private applyHighlightingToEditor(editor: Editor, state: boolean): void {
+		const cm = this.getEditorView(editor);
+		if (!cm) return;
+
+		if (state) {
+			// Compute initial decorations for visible ranges
+			const builder = new RangeSetBuilder<Decoration>();
+			for (const range of cm.visibleRanges) {
+				const visibleText = cm.state.doc.sliceString(
+					range.from,
+					range.to
+				);
+				const decorations = computeDecorations(
+					visibleText,
+					this.settings,
+					range.from
+				);
+
+				const iter = decorations.iter();
+				while (iter.value) {
+					builder.add(iter.from, iter.to, iter.value);
+					iter.next();
+				}
+			}
+
+			cm.dispatch({
+				effects: sentenceHighlightEffect.of(builder.finish()),
+			});
+		} else {
+			cm.dispatch({
+				effects: sentenceHighlightEffect.of(RangeSet.empty),
+			});
+		}
 	}
 
 	/**
 	 * Toggles highlighting only for the active editor.
 	 */
 	private async toggleHighlighting(statusBarItem: HTMLElement) {
-		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if (!activeView) return;
-		const editor = activeView.editor;
+		const editor = this.getEditorFromActiveView();
+		if (!editor) return;
 		const cm: EditorView = (editor as any).cm;
-		const current = this.editorHighlightingMap.get(cm) || false;
-		const newState = !current;
-		this.editorHighlightingMap.set(cm, newState);
-		this.updateStatusBar(statusBarItem);
+		const currentState = this.editorHighlightingMap.get(cm) || false;
+		const newState = !currentState;
 
-		if (newState) {
-			this.refreshHighlighting(editor);
-		} else {
-			cm.dispatch({ effects: sentenceHighlightEffect.of(RangeSet.empty) });
-		}
+		this.updateHighlightingState(editor, newState);
+		this.updateStatusBar(statusBarItem);
+		this.applyHighlightingToEditor(editor, newState);
 	}
 
 	/**
-	 * Recomputes and dispatches the updated decorations for the given editor.
+	 * Recomputes and dispatches the updated decorations for the visible ranges of the given editor.
 	 */
 	private refreshHighlighting(editor: Editor) {
-		const cm: EditorView = (editor as any).cm;
+		const cm = this.getEditorView(editor);
 		if (!cm) return;
-		const text = editor.getValue();
-		const decorations = computeDecorations(text, this.settings);
-		cm.dispatch({ effects: sentenceHighlightEffect.of(decorations) });
+
+		const builder = new RangeSetBuilder<Decoration>();
+		// Only process visible ranges
+		for (const range of cm.visibleRanges) {
+			const visibleText = cm.state.doc.sliceString(range.from, range.to);
+			const decorations = computeDecorations(
+				visibleText,
+				this.settings,
+				range.from
+			);
+			// Merge decorations from this visible range into our builder.
+			const iter = decorations.iter();
+			while (iter.value) {
+				builder.add(iter.from, iter.to, iter.value);
+				iter.next();
+			}
+		}
+		const fullDecorations = builder.finish();
+		cm.dispatch({ effects: sentenceHighlightEffect.of(fullDecorations) });
+	}
+
+	private updateStatusBar(statusBarItem: HTMLElement) {
+		statusBarItem.empty();
+		setIcon(statusBarItem, "list-music");
+
+		const cm = this.getEditorView();
+		const enabled = cm
+			? this.editorHighlightingMap.get(cm) || false
+			: false;
+
+		statusBarItem.title =
+			"Click to toggle sentence highlighting for this editor";
+		statusBarItem.toggleClass("is-active", enabled);
 	}
 
 	onunload() {
-		// Optionally, clear decorations from the active editor on unload.
-		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if (activeView) {
-			const cm: EditorView = (activeView.editor as any).cm;
-			if (cm) {
-				cm.dispatch({ effects: sentenceHighlightEffect.of(RangeSet.empty) });
-			}
+		const cm = this.getEditorView();
+		if (cm) {
+			cm.dispatch({
+				effects: sentenceHighlightEffect.of(RangeSet.empty),
+			});
 		}
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		this.settings = Object.assign(
+			{},
+			DEFAULT_SETTINGS,
+			await this.loadData()
+		);
 	}
 
 	async saveSettings() {
@@ -202,7 +336,9 @@ export default class MusicalTextPlugin extends Plugin {
 	}
 
 	private registerStyles() {
-		const existingStyle = document.getElementById("sentence-highlighter-styles");
+		const existingStyle = document.getElementById(
+			"sentence-highlighter-styles"
+		);
 		if (existingStyle) {
 			existingStyle.remove();
 		}
@@ -229,17 +365,26 @@ export default class MusicalTextPlugin extends Plugin {
 }
 
 /**
- * Computes a RangeSet of decorations based on sentence boundaries.
+ * Analyzes text and creates decorations for sentence highlighting.
+ * Uses regex to identify sentence boundaries and applies appropriate styling based on word count.
+ * @param text The text content to analyze
+ * @param settings Plugin settings containing thresholds and styles
+ * @param offset Position offset to adjust decoration positions
+ * @returns A RangeSet containing the computed decorations
  */
-function computeDecorations(text: string, settings: MusicalTextSettings): RangeSet<Decoration> {
+function computeDecorations(
+	text: string,
+	settings: MusicalTextSettings,
+	offset = 0
+): RangeSet<Decoration> {
 	const builder = new RangeSetBuilder<Decoration>();
 	// Use regex.exec to capture sentence boundaries
 	const regex = /[^.!?]+[.!?]+/g;
 	let match: RegExpExecArray | null;
 	while ((match = regex.exec(text)) !== null) {
 		const sentence = match[0];
-		const start = match.index;
-		const end = match.index + sentence.length;
+		const start = match.index + offset;
+		const end = start + sentence.length;
 		const wordCount = countWords(sentence);
 		const className = getClassForSentence(wordCount, settings);
 		if (className) {
@@ -249,11 +394,25 @@ function computeDecorations(text: string, settings: MusicalTextSettings): RangeS
 	return builder.finish();
 }
 
+/**
+ * Counts the number of words in a sentence using word boundary matching.
+ * @param sentence The sentence to analyze
+ * @returns Number of words found in the sentence
+ */
 function countWords(sentence: string): number {
 	return (sentence.match(/\b\w+\b/g) || []).length;
 }
 
-function getClassForSentence(wordCount: number, settings: MusicalTextSettings): string {
+/**
+ * Determines the appropriate CSS class for a sentence based on its word count.
+ * @param wordCount Number of words in the sentence
+ * @param settings Plugin settings containing thresholds
+ * @returns CSS class name for styling the sentence
+ */
+function getClassForSentence(
+	wordCount: number,
+	settings: MusicalTextSettings
+): string {
 	if (wordCount <= settings.shortThreshold) {
 		return "sh-short";
 	} else if (wordCount >= settings.longThreshold) {
@@ -262,6 +421,10 @@ function getClassForSentence(wordCount: number, settings: MusicalTextSettings): 
 	return "sh-medium";
 }
 
+/**
+ * Settings tab implementation for the Musical Text plugin.
+ * Provides UI for configuring sentence thresholds and highlight colors.
+ */
 class SentenceHighlighterSettingTab extends PluginSettingTab {
 	plugin: MusicalTextPlugin;
 	constructor(app: App, plugin: MusicalTextPlugin) {
@@ -271,10 +434,11 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-		// containerEl.createEl("h2", { text: "Musical Text" });
 		new Setting(containerEl)
 			.setName("Short sentence threshold")
-			.setDesc("Number of words or less to be considered a short sentence")
+			.setDesc(
+				"Number of words or less to be considered a short sentence"
+			)
 			.addText((text) =>
 				text
 					.setPlaceholder("10")
