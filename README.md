@@ -2,6 +2,8 @@
 
 Get immediate visual feedback about your sentence variety while writing in Obsidian. This plugin highlights sentences based on their length, helping you create more engaging and rhythmic prose.
 
+![Demo of Musical Text plugin](imgs/demo.gif)
+
 ## Features
 
 - Real-time sentence highlighting as you type
