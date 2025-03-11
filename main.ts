@@ -132,7 +132,7 @@ export default class MusicalTextPlugin extends Plugin {
 		// Register a command to toggle highlighting in the active editor.
 		this.addCommand({
 			id: "toggle-sentence-highlighting",
-			name: "Toggle Sentence Highlighting (Current Editor)",
+			name: "Toggle musical text highlighting",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				this.toggleHighlighting(statusBarItem);
 			},
