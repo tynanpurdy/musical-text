@@ -23,7 +23,7 @@ Get immediate visual feedback about your sentence variety while writing in Obsid
 3. Start writing! Sentences will be automatically highlighted based on their length
 4. Toggle highlighting using:
    - The status bar button (highlighter icon)
-   - The command palette (`Cmd/Ctrl + P` → "Toggle Sentence Highlighting")
+   - The command palette (`Cmd/Ctrl + P` → "Toggle musical text highlighting")
 
 ## Configuration
 
