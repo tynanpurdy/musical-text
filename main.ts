@@ -20,10 +20,12 @@ import {
  * Defines color schemes and thresholds for sentence highlighting.
  */
 interface MusicalTextSettings {
+	miniSentenceColor: string;
 	shortSentenceColor: string;
 	mediumSentenceColor: string;
 	longSentenceColor: string;
 	shortThreshold: number;
+	mediumThreshold: number;
 	longThreshold: number;
 	// We'll keep a global default for new editors; individual editors override this.
 	defaultHighlightingEnabled: boolean;
@@ -34,11 +36,13 @@ interface MusicalTextSettings {
  * Provides initial values for colors and thresholds.
  */
 const DEFAULT_SETTINGS: MusicalTextSettings = {
+	miniSentenceColor: "#e0f7fa", // light cyan
 	shortSentenceColor: "#e3f2fd", // light blue
 	mediumSentenceColor: "#fff3e0", // light orange
 	longSentenceColor: "#ffebee", // light red
 	shortThreshold: 3, // words
-	longThreshold: 7, // words
+	mediumThreshold: 7, // words
+	longThreshold: 15, // words
 	defaultHighlightingEnabled: false,
 };
 
@@ -356,8 +360,9 @@ export default class MusicalTextPlugin extends Plugin {
 			.sentence-highlighter-status.is-active {
 				color: var(--interactive-accent);
 			}
-			.sh-short { background-color: ${this.settings.shortSentenceColor}; }
-			.sh-medium { background-color: ${this.settings.mediumSentenceColor}; }
+			.sh-short { background-color: ${this.settings.miniSentenceColor}; }
+			.sh-medium { background-color: ${this.settings.shortSentenceColor}; }
+			.sh-medium-long { background-color: ${this.settings.mediumSentenceColor}; }
 			.sh-long { background-color: ${this.settings.longSentenceColor}; }
 		`;
 		document.head.appendChild(style);
@@ -413,12 +418,15 @@ function getClassForSentence(
 	wordCount: number,
 	settings: MusicalTextSettings
 ): string {
-	if (wordCount <= settings.shortThreshold) {
+	if (wordCount < settings.shortThreshold) {
+		return "sh-mini";
+	} else if (wordCount <= settings.mediumThreshold) {
 		return "sh-short";
-	} else if (wordCount >= settings.longThreshold) {
+	} else if (wordCount <= settings.longThreshold) {
+		return "sh-medium";
+	} else {
 		return "sh-long";
 	}
-	return "sh-medium";
 }
 
 /**
@@ -452,6 +460,23 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 					})
 			);
 		new Setting(containerEl)
+			.setName("Medium sentence threshold")
+			.setDesc(
+				"Number of words between short and long thresholds to be considered a medium sentence"
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("15")
+					.setValue(this.plugin.settings.mediumThreshold.toString())
+					.onChange(async (value) => {
+						const numValue = parseInt(value);
+						if (!isNaN(numValue) && numValue > 0) {
+							this.plugin.settings.mediumThreshold = numValue;
+							await this.plugin.saveSettings();
+						}
+					})
+			);
+		new Setting(containerEl)
 			.setName("Long sentence threshold")
 			.setDesc("Number of words or more to be considered a long sentence")
 			.addText((text) =>
@@ -464,6 +489,17 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 							this.plugin.settings.longThreshold = numValue;
 							await this.plugin.saveSettings();
 						}
+					})
+			);
+		new Setting(containerEl)
+			.setName("Mini sentence color")
+			.setDesc("Color for sentences below the short threshold")
+			.addColorPicker((cp) =>
+				cp
+					.setValue(this.plugin.settings.miniSentenceColor)
+					.onChange(async (value) => {
+						this.plugin.settings.miniSentenceColor = value;
+						await this.plugin.saveSettings();
 					})
 			);
 		new Setting(containerEl)
