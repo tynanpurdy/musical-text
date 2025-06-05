@@ -36,13 +36,13 @@ interface MusicalTextSettings {
  * Provides initial values for colors and thresholds.
  */
 const DEFAULT_SETTINGS: MusicalTextSettings = {
-	miniSentenceColor: "#e0f7fa", // light cyan
-	shortSentenceColor: "#e3f2fd", // light blue
-	mediumSentenceColor: "#fff3e0", // light orange
-	longSentenceColor: "#ffebee", // light red
-	shortThreshold: 3, // words
+	miniSentenceColor: "#AF3029", // light cyan
+	shortSentenceColor: "#BC5215", // light blue
+	mediumSentenceColor: "#AD8301", // light orange
+	longSentenceColor: "#66800B", // light red
+	shortThreshold: 5, // words
 	mediumThreshold: 7, // words
-	longThreshold: 15, // words
+	longThreshold: 9, // words
 	defaultHighlightingEnabled: false,
 };
 
@@ -89,12 +89,12 @@ function liveHighlightExtension(plugin: MusicalTextPlugin) {
 			for (const range of update.view.visibleRanges) {
 				const visibleText = update.state.doc.sliceString(
 					range.from,
-					range.to
+					range.to,
 				);
 				const decorations = computeDecorations(
 					visibleText,
 					plugin.settings,
-					range.from
+					range.from,
 				);
 
 				const iter = decorations.iter();
@@ -170,7 +170,7 @@ export default class MusicalTextPlugin extends Plugin {
 						});
 					}
 				}
-			})
+			}),
 		);
 
 		// Initialize the active editor's highlighting state to the default.
@@ -179,7 +179,7 @@ export default class MusicalTextPlugin extends Plugin {
 			const cm: EditorView = (activeView.editor as any).cm;
 			this.editorHighlightingMap.set(
 				cm,
-				this.settings.defaultHighlightingEnabled
+				this.settings.defaultHighlightingEnabled,
 			);
 			if (this.settings.defaultHighlightingEnabled) {
 				this.refreshHighlighting(activeView.editor);
@@ -236,12 +236,12 @@ export default class MusicalTextPlugin extends Plugin {
 			for (const range of cm.visibleRanges) {
 				const visibleText = cm.state.doc.sliceString(
 					range.from,
-					range.to
+					range.to,
 				);
 				const decorations = computeDecorations(
 					visibleText,
 					this.settings,
-					range.from
+					range.from,
 				);
 
 				const iter = decorations.iter();
@@ -290,7 +290,7 @@ export default class MusicalTextPlugin extends Plugin {
 			const decorations = computeDecorations(
 				visibleText,
 				this.settings,
-				range.from
+				range.from,
 			);
 			// Merge decorations from this visible range into our builder.
 			const iter = decorations.iter();
@@ -330,7 +330,7 @@ export default class MusicalTextPlugin extends Plugin {
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			await this.loadData()
+			await this.loadData(),
 		);
 	}
 
@@ -341,7 +341,7 @@ export default class MusicalTextPlugin extends Plugin {
 
 	private registerStyles() {
 		const existingStyle = document.getElementById(
-			"sentence-highlighter-styles"
+			"sentence-highlighter-styles",
 		);
 		if (existingStyle) {
 			existingStyle.remove();
@@ -360,9 +360,9 @@ export default class MusicalTextPlugin extends Plugin {
 			.sentence-highlighter-status.is-active {
 				color: var(--interactive-accent);
 			}
-			.sh-short { background-color: ${this.settings.miniSentenceColor}; }
-			.sh-medium { background-color: ${this.settings.shortSentenceColor}; }
-			.sh-medium-long { background-color: ${this.settings.mediumSentenceColor}; }
+			.sh-mini { background-color: ${this.settings.miniSentenceColor}; }
+			.sh-short { background-color: ${this.settings.shortSentenceColor}; }
+			.sh-medium { background-color: ${this.settings.mediumSentenceColor}; }
 			.sh-long { background-color: ${this.settings.longSentenceColor}; }
 		`;
 		document.head.appendChild(style);
@@ -380,7 +380,7 @@ export default class MusicalTextPlugin extends Plugin {
 function computeDecorations(
 	text: string,
 	settings: MusicalTextSettings,
-	offset = 0
+	offset = 0,
 ): RangeSet<Decoration> {
 	const builder = new RangeSetBuilder<Decoration>();
 	// Use regex.exec to capture sentence boundaries
@@ -416,7 +416,7 @@ function countWords(sentence: string): number {
  */
 function getClassForSentence(
 	wordCount: number,
-	settings: MusicalTextSettings
+	settings: MusicalTextSettings,
 ): string {
 	if (wordCount < settings.shortThreshold) {
 		return "sh-mini";
@@ -445,51 +445,75 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Short sentence threshold")
 			.setDesc(
-				"Number of words or less to be considered a short sentence"
+				"Number of words or less to be considered a short sentence",
 			)
 			.addText((text) =>
 				text
-					.setPlaceholder("10")
+					.setPlaceholder(DEFAULT_SETTINGS.shortThreshold.toString())
 					.setValue(this.plugin.settings.shortThreshold.toString())
 					.onChange(async (value) => {
-						const numValue = parseInt(value);
-						if (!isNaN(numValue) && numValue > 0) {
-							this.plugin.settings.shortThreshold = numValue;
+						if (value == "") {
+							this.plugin.settings.shortThreshold =
+								DEFAULT_SETTINGS.shortThreshold;
 							await this.plugin.saveSettings();
+							return;
 						}
-					})
+						const numValue = parseInt(value);
+						if (isNaN(numValue) || numValue <= 0) {
+							// TODO: toast why input is invalid
+							return;
+						}
+						this.plugin.settings.shortThreshold = numValue;
+						await this.plugin.saveSettings();
+					}),
 			);
 		new Setting(containerEl)
 			.setName("Medium sentence threshold")
 			.setDesc(
-				"Number of words between short and long thresholds to be considered a medium sentence"
+				"Number of words between short and long thresholds to be considered a medium sentence",
 			)
 			.addText((text) =>
 				text
-					.setPlaceholder("15")
+					.setPlaceholder(DEFAULT_SETTINGS.mediumThreshold.toString())
 					.setValue(this.plugin.settings.mediumThreshold.toString())
 					.onChange(async (value) => {
-						const numValue = parseInt(value);
-						if (!isNaN(numValue) && numValue > 0) {
-							this.plugin.settings.mediumThreshold = numValue;
+						if (value == "") {
+							this.plugin.settings.mediumThreshold =
+								DEFAULT_SETTINGS.mediumThreshold;
 							await this.plugin.saveSettings();
+							return;
 						}
-					})
+						const numValue = parseInt(value);
+						if (isNaN(numValue) || numValue <= 0) {
+							// TODO: toast why input is invalid
+							return;
+						}
+						this.plugin.settings.mediumThreshold = numValue;
+						await this.plugin.saveSettings();
+					}),
 			);
 		new Setting(containerEl)
 			.setName("Long sentence threshold")
 			.setDesc("Number of words or more to be considered a long sentence")
 			.addText((text) =>
 				text
-					.setPlaceholder("25")
+					.setPlaceholder(DEFAULT_SETTINGS.longThreshold.toString())
 					.setValue(this.plugin.settings.longThreshold.toString())
 					.onChange(async (value) => {
-						const numValue = parseInt(value);
-						if (!isNaN(numValue) && numValue > 0) {
-							this.plugin.settings.longThreshold = numValue;
+						if (value == "") {
+							this.plugin.settings.longThreshold =
+								DEFAULT_SETTINGS.longThreshold;
 							await this.plugin.saveSettings();
+							return;
 						}
-					})
+						const numValue = parseInt(value);
+						if (isNaN(numValue) || numValue <= 0) {
+							// TODO: toast why input is invalid
+							return;
+						}
+						this.plugin.settings.longThreshold = numValue;
+						await this.plugin.saveSettings();
+					}),
 			);
 		new Setting(containerEl)
 			.setName("Mini sentence color")
@@ -500,7 +524,7 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.miniSentenceColor = value;
 						await this.plugin.saveSettings();
-					})
+					}),
 			);
 		new Setting(containerEl)
 			.setName("Short sentence color")
@@ -511,7 +535,7 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.shortSentenceColor = value;
 						await this.plugin.saveSettings();
-					})
+					}),
 			);
 		new Setting(containerEl)
 			.setName("Medium sentence color")
@@ -522,7 +546,7 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.mediumSentenceColor = value;
 						await this.plugin.saveSettings();
-					})
+					}),
 			);
 		new Setting(containerEl)
 			.setName("Long sentence color")
@@ -533,7 +557,7 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.longSentenceColor = value;
 						await this.plugin.saveSettings();
-					})
+					}),
 			);
 	}
 }
