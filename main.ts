@@ -447,6 +447,16 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 			.setDesc(
 				"Number of words or less to be considered a short sentence",
 			)
+			.addExtraButton((button) =>
+				button
+					.setIcon("reset")
+					.setTooltip("Reset to default threshold")
+					.onClick(async () => {
+						this.plugin.settings.shortThreshold = DEFAULT_SETTINGS.shortThreshold;
+						await this.plugin.saveSettings();
+						this.display();
+					}),
+			)
 			.addText((text) =>
 				text
 					.setPlaceholder(DEFAULT_SETTINGS.shortThreshold.toString())
@@ -472,6 +482,16 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 			.setDesc(
 				"Number of words between short and long thresholds to be considered a medium sentence",
 			)
+			.addExtraButton((button) =>
+				button
+					.setIcon("reset")
+					.setTooltip("Reset to default threshold")
+					.onClick(async () => {
+						this.plugin.settings.mediumThreshold = DEFAULT_SETTINGS.mediumThreshold;
+						await this.plugin.saveSettings();
+						this.display();
+					}),
+			)
 			.addText((text) =>
 				text
 					.setPlaceholder(DEFAULT_SETTINGS.mediumThreshold.toString())
@@ -495,6 +515,16 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Long sentence threshold")
 			.setDesc("Number of words or more to be considered a long sentence")
+			.addExtraButton((button) =>
+				button
+					.setIcon("reset")
+					.setTooltip("Reset to default threshold")
+					.onClick(async () => {
+						this.plugin.settings.longThreshold = DEFAULT_SETTINGS.longThreshold;
+						await this.plugin.saveSettings();
+						this.display();
+					}),
+			)
 			.addText((text) =>
 				text
 					.setPlaceholder(DEFAULT_SETTINGS.longThreshold.toString())
@@ -518,6 +548,17 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Mini sentence color")
 			.setDesc("Color for sentences below the short threshold")
+			.addExtraButton((button) =>
+				button
+					.setIcon("reset")
+					.setTooltip("Reset to default color")
+					.onClick(async () => {
+						this.plugin.settings.miniSentenceColor =
+							DEFAULT_SETTINGS.miniSentenceColor;
+						await this.plugin.saveSettings();
+						this.display();
+					}),
+			)
 			.addColorPicker((cp) =>
 				cp
 					.setValue(this.plugin.settings.miniSentenceColor)
@@ -529,6 +570,17 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Short sentence color")
 			.setDesc("Color for sentences below the short threshold")
+			.addExtraButton((button) =>
+				button
+					.setIcon("reset")
+					.setTooltip("Reset to default color")
+					.onClick(async () => {
+						this.plugin.settings.shortSentenceColor =
+							DEFAULT_SETTINGS.shortSentenceColor;
+						await this.plugin.saveSettings();
+						this.display();
+					}),
+			)
 			.addColorPicker((cp) =>
 				cp
 					.setValue(this.plugin.settings.shortSentenceColor)
@@ -540,6 +592,17 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Medium sentence color")
 			.setDesc("Color for sentences between thresholds")
+			.addExtraButton((button) =>
+				button
+					.setIcon("reset")
+					.setTooltip("Reset to default color")
+					.onClick(async () => {
+						this.plugin.settings.mediumSentenceColor =
+							DEFAULT_SETTINGS.mediumSentenceColor;
+						await this.plugin.saveSettings();
+						this.display();
+					}),
+			)
 			.addColorPicker((cp) =>
 				cp
 					.setValue(this.plugin.settings.mediumSentenceColor)
@@ -551,6 +614,17 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Long sentence color")
 			.setDesc("Color for sentences above the long threshold")
+			.addExtraButton((button) =>
+				button
+					.setIcon("reset")
+					.setTooltip("Reset to default color")
+					.onClick(async () => {
+						this.plugin.settings.longSentenceColor =
+							DEFAULT_SETTINGS.longSentenceColor;
+						await this.plugin.saveSettings();
+						this.display();
+					}),
+			)
 			.addColorPicker((cp) =>
 				cp
 					.setValue(this.plugin.settings.longSentenceColor)
