@@ -133,6 +133,9 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
+		// Ensure thresholds are valid before displaying
+		this.validateThresholds();
+
 		new Setting(containerEl)
 			.setName("Sentence marking style")
 			.setDesc("Choose how sentences are visually marked")
@@ -263,7 +266,7 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Short sentence threshold")
 			.setDesc(
-				"Number of words or less to be considered a short sentence",
+				`Number of words or less to be considered a short sentence (current: ${this.plugin.settings.shortThreshold} words)`,
 			)
 			.addExtraButton((button) =>
 				button
@@ -276,33 +279,26 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 						this.display();
 					}),
 			)
-			.addText((text) =>
-				text
-					.setPlaceholder(DEFAULT_SETTINGS.shortThreshold.toString())
-					.setValue(this.plugin.settings.shortThreshold.toString())
+			.addSlider((slider) =>
+				slider
+					.setLimits(
+						1,
+						Math.max(1, this.plugin.settings.mediumThreshold - 1),
+						1,
+					)
+					.setValue(this.plugin.settings.shortThreshold)
 					.onChange(async (value) => {
-						if (value == "") {
-							this.plugin.settings.shortThreshold =
-								DEFAULT_SETTINGS.shortThreshold;
-							await this.plugin.saveSettings();
-							return;
-						}
-						const numValue = parseInt(value);
-						if (isNaN(numValue) || numValue <= 0) {
-							new Notice(
-								"Short threshold must be a positive number. Reverting to previous value.",
-							);
-							this.display(); // Revert to previous value by refreshing
-							return;
-						}
-						this.plugin.settings.shortThreshold = numValue;
+						this.plugin.settings.shortThreshold = value;
+						this.validateThresholds();
 						await this.plugin.saveSettings();
-					}),
+						this.display();
+					})
+					.setDynamicTooltip(),
 			);
 		new Setting(containerEl)
 			.setName("Medium sentence threshold")
 			.setDesc(
-				"Number of words between short and long thresholds to be considered a medium sentence",
+				`Number of words between short and long thresholds to be considered a medium sentence (current: ${this.plugin.settings.mediumThreshold} words)`,
 			)
 			.addExtraButton((button) =>
 				button
@@ -315,32 +311,28 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 						this.display();
 					}),
 			)
-			.addText((text) =>
-				text
-					.setPlaceholder(DEFAULT_SETTINGS.mediumThreshold.toString())
-					.setValue(this.plugin.settings.mediumThreshold.toString())
+			.addSlider((slider) =>
+				slider
+					.setLimits(
+						Math.max(2, this.plugin.settings.shortThreshold + 1),
+						Math.max(
+							this.plugin.settings.shortThreshold + 2,
+							this.plugin.settings.longThreshold - 1,
+						),
+						1,
+					)
+					.setValue(this.plugin.settings.mediumThreshold)
 					.onChange(async (value) => {
-						if (value == "") {
-							this.plugin.settings.mediumThreshold =
-								DEFAULT_SETTINGS.mediumThreshold;
-							await this.plugin.saveSettings();
-							return;
-						}
-						const numValue = parseInt(value);
-						if (isNaN(numValue) || numValue <= 0) {
-							new Notice(
-								"Medium threshold must be a positive number. Reverting to previous value.",
-							);
-							this.display(); // Revert to previous value by refreshing
-							return;
-						}
-						this.plugin.settings.mediumThreshold = numValue;
+						this.plugin.settings.mediumThreshold = value;
+						this.validateThresholds();
 						await this.plugin.saveSettings();
-					}),
+						this.display();
+					})
+					.setDynamicTooltip(),
 			);
 		new Setting(containerEl)
 			.setName("Long sentence threshold")
-			.setDesc("Number of words or more to be considered a long sentence")
+			.setDesc(`Number of words or more to be considered a long sentence`)
 			.addExtraButton((button) =>
 				button
 					.setIcon("reset")
@@ -352,29 +344,87 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 						this.display();
 					}),
 			)
-			.addText((text) =>
-				text
+			.addText((text) => {
+				const textComponent = text
 					.setPlaceholder(DEFAULT_SETTINGS.longThreshold.toString())
-					.setValue(this.plugin.settings.longThreshold.toString())
-					.onChange(async (value) => {
-						if (value == "") {
-							this.plugin.settings.longThreshold =
-								DEFAULT_SETTINGS.longThreshold;
-							await this.plugin.saveSettings();
-							return;
-						}
-						const numValue = parseInt(value);
-						if (isNaN(numValue) || numValue <= 0) {
-							new Notice(
-								"Long threshold must be a positive number. Reverting to previous value.",
-							);
-							this.display(); // Revert to previous value by refreshing
-							return;
-						}
-						this.plugin.settings.longThreshold = numValue;
+					.setValue(this.plugin.settings.longThreshold.toString());
+
+				// Validation function to avoid duplication
+				const validateAndSave = async () => {
+					const value = textComponent.getValue();
+					if (value == "") {
+						this.plugin.settings.longThreshold =
+							DEFAULT_SETTINGS.longThreshold;
 						await this.plugin.saveSettings();
-					}),
+						this.display();
+						return;
+					}
+					const numValue = parseInt(value);
+					if (
+						isNaN(numValue) ||
+						numValue <= this.plugin.settings.mediumThreshold
+					) {
+						new Notice(
+							`Long threshold must be greater than medium threshold (${this.plugin.settings.mediumThreshold}). Reverting to previous value.`,
+						);
+						this.display(); // Revert to previous value by refreshing
+						return;
+					}
+					this.plugin.settings.longThreshold = numValue;
+					await this.plugin.saveSettings();
+					this.display();
+				};
+
+				// Use blur event instead of change to allow complete typing
+				textComponent.inputEl.addEventListener("blur", validateAndSave);
+
+				// Also validate on Enter key
+				textComponent.inputEl.addEventListener("keydown", (e) => {
+					if (e.key === "Enter") {
+						validateAndSave();
+					}
+				});
+
+				return textComponent;
+			});
+	}
+
+	private validateThresholds(): void {
+		// Ensure thresholds are in correct order: short < medium < long
+		// Also ensure minimum viable ranges for sliders
+
+		// Ensure medium is at least short + 1 (minimum 2)
+		if (
+			this.plugin.settings.mediumThreshold <=
+			this.plugin.settings.shortThreshold
+		) {
+			this.plugin.settings.mediumThreshold = Math.max(
+				2,
+				this.plugin.settings.shortThreshold + 1,
 			);
+		}
+
+		// Ensure long is at least medium + 1 (minimum 3)
+		if (
+			this.plugin.settings.longThreshold <=
+			this.plugin.settings.mediumThreshold
+		) {
+			this.plugin.settings.longThreshold = Math.max(
+				3,
+				this.plugin.settings.mediumThreshold + 1,
+			);
+		}
+
+		// Ensure short is at least 1 but less than medium
+		if (
+			this.plugin.settings.shortThreshold >=
+			this.plugin.settings.mediumThreshold
+		) {
+			this.plugin.settings.shortThreshold = Math.max(
+				1,
+				this.plugin.settings.mediumThreshold - 1,
+			);
+		}
 	}
 
 	private applyPalette(paletteKey: string) {
