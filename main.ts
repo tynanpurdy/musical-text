@@ -6,6 +6,7 @@ import {
 	Editor,
 	MarkdownView,
 	setIcon,
+	Notice,
 } from "obsidian";
 import { EditorView, Decoration } from "@codemirror/view";
 import {
@@ -402,6 +403,25 @@ export default class MusicalTextPlugin extends Plugin {
 		cm.dispatch({ effects: sentenceHighlightEffect.of(fullDecorations) });
 	}
 
+	/**
+	 * Refreshes highlighting in all open editors that have highlighting enabled
+	 */
+	private refreshAllActiveHighlighting() {
+		// Update CSS styles first
+		this.registerStyles();
+		
+		// Refresh highlighting in all open editors
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			if (leaf.view instanceof MarkdownView) {
+				const editor = leaf.view.editor;
+				const cm = this.getEditorView(editor);
+				if (cm && this.editorHighlightingMap.get(cm)) {
+					this.refreshHighlighting(editor);
+				}
+			}
+		});
+	}
+
 	private updateStatusBar(statusBarItem: HTMLElement) {
 		statusBarItem.empty();
 		setIcon(statusBarItem, "list-music");
@@ -435,7 +455,7 @@ export default class MusicalTextPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
-		this.registerStyles(); // Update styles if settings changed.
+		this.refreshAllActiveHighlighting(); // Update styles and refresh all active highlighting
 	}
 
 	private registerStyles() {
@@ -571,7 +591,8 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 						}
 						const numValue = parseInt(value);
 						if (isNaN(numValue) || numValue <= 0) {
-							// TODO: toast why input is invalid
+							new Notice("Short threshold must be a positive number. Reverting to previous value.");
+							this.display(); // Revert to previous value by refreshing
 							return;
 						}
 						this.plugin.settings.shortThreshold = numValue;
@@ -607,7 +628,8 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 						}
 						const numValue = parseInt(value);
 						if (isNaN(numValue) || numValue <= 0) {
-							// TODO: toast why input is invalid
+							new Notice("Medium threshold must be a positive number. Reverting to previous value.");
+							this.display(); // Revert to previous value by refreshing
 							return;
 						}
 						this.plugin.settings.mediumThreshold = numValue;
@@ -641,7 +663,8 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 						}
 						const numValue = parseInt(value);
 						if (isNaN(numValue) || numValue <= 0) {
-							// TODO: toast why input is invalid
+							new Notice("Long threshold must be a positive number. Reverting to previous value.");
+							this.display(); // Revert to previous value by refreshing
 							return;
 						}
 						this.plugin.settings.longThreshold = numValue;
