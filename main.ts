@@ -17,11 +17,21 @@ import {
 } from "@codemirror/state";
 
 /**
+ * Enum for different sentence marking styles
+ */
+enum SentenceMarkingStyle {
+	HIGHLIGHTING = "highlighting",
+	TEXT_COLOR = "textColor",
+	COLOR_UNDERLINING = "colorUnderlining",
+}
+
+/**
  * Settings interface for the Musical Text plugin.
  * Defines color schemes and thresholds for sentence highlighting.
  */
 interface MusicalTextSettings {
 	colorPalette: string;
+	markingStyle: SentenceMarkingStyle;
 	miniSentenceColor: string;
 	shortSentenceColor: string;
 	mediumSentenceColor: string;
@@ -136,6 +146,7 @@ const COLOR_PALETTES: Record<string, ColorPalette> = {
  */
 const DEFAULT_SETTINGS: MusicalTextSettings = {
 	colorPalette: "default",
+	markingStyle: SentenceMarkingStyle.HIGHLIGHTING,
 	miniSentenceColor: COLOR_PALETTES.default.miniSentenceColor,
 	shortSentenceColor: COLOR_PALETTES.default.shortSentenceColor,
 	mediumSentenceColor: COLOR_PALETTES.default.mediumSentenceColor,
@@ -148,11 +159,11 @@ const DEFAULT_SETTINGS: MusicalTextSettings = {
 
 /**
  * Color utility functions for generating contrasting text colors
- * 
+ *
  * This system automatically generates text colors that maintain good contrast
  * with any background color while preserving the same hue. This ensures
  * readability across all color palettes and custom color selections.
- * 
+ *
  * Examples:
  * - Background: #ff5555 (bright red) → Text: #4d0000 (dark red)
  * - Background: #2d2d2d (dark gray) → Text: #e0e0e0 (light gray)
@@ -166,31 +177,37 @@ const DEFAULT_SETTINGS: MusicalTextSettings = {
  */
 function hexToHsl(hex: string): { h: number; s: number; l: number } {
 	// Remove # if present
-	hex = hex.replace('#', '');
-	
+	hex = hex.replace("#", "");
+
 	// Convert to RGB
 	const r = parseInt(hex.substr(0, 2), 16) / 255;
 	const g = parseInt(hex.substr(2, 2), 16) / 255;
 	const b = parseInt(hex.substr(4, 2), 16) / 255;
-	
+
 	const max = Math.max(r, g, b);
 	const min = Math.min(r, g, b);
 	let h = 0;
 	let s = 0;
 	const l = (max + min) / 2;
-	
+
 	if (max !== min) {
 		const d = max - min;
 		s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-		
+
 		switch (max) {
-			case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-			case g: h = (b - r) / d + 2; break;
-			case b: h = (r - g) / d + 4; break;
+			case r:
+				h = (g - b) / d + (g < b ? 6 : 0);
+				break;
+			case g:
+				h = (b - r) / d + 2;
+				break;
+			case b:
+				h = (r - g) / d + 4;
+				break;
 		}
 		h /= 6;
 	}
-	
+
 	return { h: h * 360, s: s * 100, l: l * 100 };
 }
 
@@ -205,39 +222,39 @@ function hslToHex(h: number, s: number, l: number): string {
 	h = h / 360;
 	s = s / 100;
 	l = l / 100;
-	
+
 	const hue2rgb = (p: number, q: number, t: number) => {
 		if (t < 0) t += 1;
 		if (t > 1) t -= 1;
-		if (t < 1/6) return p + (q - p) * 6 * t;
-		if (t < 1/2) return q;
-		if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+		if (t < 1 / 6) return p + (q - p) * 6 * t;
+		if (t < 1 / 2) return q;
+		if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
 		return p;
 	};
-	
+
 	let r, g, b;
-	
+
 	if (s === 0) {
 		r = g = b = l; // achromatic
 	} else {
 		const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
 		const p = 2 * l - q;
-		r = hue2rgb(p, q, h + 1/3);
+		r = hue2rgb(p, q, h + 1 / 3);
 		g = hue2rgb(p, q, h);
-		b = hue2rgb(p, q, h - 1/3);
+		b = hue2rgb(p, q, h - 1 / 3);
 	}
-	
+
 	const toHex = (c: number) => {
 		const hex = Math.round(c * 255).toString(16);
-		return hex.length === 1 ? '0' + hex : hex;
+		return hex.length === 1 ? "0" + hex : hex;
 	};
-	
+
 	return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
 /**
  * Generates a contrasting text color of the same hue for optimal readability
- * 
+ *
  * The algorithm works by:
  * 1. Converting the background color from hex to HSL (Hue, Saturation, Lightness)
  * 2. Preserving the hue to maintain color harmony
@@ -245,13 +262,13 @@ function hslToHex(h: number, s: number, l: number): string {
  *    - Light backgrounds (>50% lightness) get dark text (~15-25% lightness)
  *    - Dark backgrounds (≤50% lightness) get light text (~75-85% lightness)
  * 4. Slightly boosting saturation for better visibility
- * 
+ *
  * @param backgroundColor The background color in hex format (e.g., "#ff5555")
  * @returns A contrasting text color in hex format that maintains readability
  */
 function getContrastingTextColor(backgroundColor: string): string {
 	const hsl = hexToHsl(backgroundColor);
-	
+
 	// For light backgrounds (lightness > 50%), use a much darker version
 	// For dark backgrounds (lightness <= 50%), use a much lighter version
 	let newLightness: number;
@@ -262,10 +279,10 @@ function getContrastingTextColor(backgroundColor: string): string {
 		// Dark background - use light text (75-85% lightness)
 		newLightness = Math.min(85, hsl.l + 60);
 	}
-	
+
 	// Increase saturation slightly for better visibility while maintaining hue
 	const adjustedSaturation = Math.min(100, hsl.s * 1.1);
-	
+
 	return hslToHex(hsl.h, adjustedSaturation, newLightness);
 }
 
@@ -532,7 +549,7 @@ export default class MusicalTextPlugin extends Plugin {
 	private refreshAllActiveHighlighting() {
 		// Update CSS styles first
 		this.registerStyles();
-		
+
 		// Refresh highlighting in all open editors
 		this.app.workspace.iterateAllLeaves((leaf) => {
 			if (leaf.view instanceof MarkdownView) {
@@ -590,51 +607,120 @@ export default class MusicalTextPlugin extends Plugin {
 		}
 		const style = document.createElement("style");
 		style.id = "sentence-highlighter-styles";
-		
-		// Generate contrasting text colors for each background color
-		// This ensures optimal readability while maintaining color harmony
-		const miniTextColor = getContrastingTextColor(this.settings.miniSentenceColor);
-		const shortTextColor = getContrastingTextColor(this.settings.shortSentenceColor);
-		const mediumTextColor = getContrastingTextColor(this.settings.mediumSentenceColor);
-		const longTextColor = getContrastingTextColor(this.settings.longSentenceColor);
-		
-		style.textContent = `
-			.sentence-highlighter-status {
-				cursor: pointer;
-				opacity: 0.8;
-				transition: opacity 0.1s ease-in-out;
+
+		// Generate styles based on marking style preference
+		const generateSentenceStyles = () => {
+			const baseStyles = `
+				.sentence-highlighter-status {
+					cursor: pointer;
+					opacity: 0.8;
+					transition: opacity 0.1s ease-in-out;
+				}
+				.sentence-highlighter-status:hover {
+					opacity: 1;
+				}
+				.sentence-highlighter-status.is-active {
+					color: var(--interactive-accent);
+				}
+			`;
+
+			switch (this.settings.markingStyle) {
+				case SentenceMarkingStyle.HIGHLIGHTING: {
+					// Generate contrasting text colors for background highlighting
+					const miniTextColor = getContrastingTextColor(
+						this.settings.miniSentenceColor,
+					);
+					const shortTextColor = getContrastingTextColor(
+						this.settings.shortSentenceColor,
+					);
+					const mediumTextColor = getContrastingTextColor(
+						this.settings.mediumSentenceColor,
+					);
+					const longTextColor = getContrastingTextColor(
+						this.settings.longSentenceColor,
+					);
+
+					return (
+						baseStyles +
+						`
+						.sh-mini {
+							background-color: ${this.settings.miniSentenceColor};
+							color: ${miniTextColor};
+							border-radius: 3px;
+							padding: 1px 2px;
+						}
+						.sh-short {
+							background-color: ${this.settings.shortSentenceColor};
+							color: ${shortTextColor};
+							border-radius: 3px;
+							padding: 1px 2px;
+						}
+						.sh-medium {
+							background-color: ${this.settings.mediumSentenceColor};
+							color: ${mediumTextColor};
+							border-radius: 3px;
+							padding: 1px 2px;
+						}
+						.sh-long {
+							background-color: ${this.settings.longSentenceColor};
+							color: ${longTextColor};
+							border-radius: 3px;
+							padding: 1px 2px;
+						}
+					`
+					);
+				}
+
+				case SentenceMarkingStyle.TEXT_COLOR: {
+					return (
+						baseStyles +
+						`
+						.sh-mini { color: ${this.settings.miniSentenceColor}; }
+						.sh-short { color: ${this.settings.shortSentenceColor}; }
+						.sh-medium { color: ${this.settings.mediumSentenceColor}; }
+						.sh-long { color: ${this.settings.longSentenceColor}; }
+					`
+					);
+				}
+
+				case SentenceMarkingStyle.COLOR_UNDERLINING: {
+					return (
+						baseStyles +
+						`
+						.sh-mini {
+							text-decoration: underline;
+							text-decoration-color: ${this.settings.miniSentenceColor};
+							text-decoration-thickness: 2px;
+							text-underline-offset: 2px;
+						}
+						.sh-short {
+							text-decoration: underline;
+							text-decoration-color: ${this.settings.shortSentenceColor};
+							text-decoration-thickness: 2px;
+							text-underline-offset: 2px;
+						}
+						.sh-medium {
+							text-decoration: underline;
+							text-decoration-color: ${this.settings.mediumSentenceColor};
+							text-decoration-thickness: 2px;
+							text-underline-offset: 2px;
+						}
+						.sh-long {
+							text-decoration: underline;
+							text-decoration-color: ${this.settings.longSentenceColor};
+							text-decoration-thickness: 2px;
+							text-underline-offset: 2px;
+						}
+					`
+					);
+				}
+
+				default:
+					return baseStyles;
 			}
-			.sentence-highlighter-status:hover {
-				opacity: 1;
-			}
-			.sentence-highlighter-status.is-active {
-				color: var(--interactive-accent);
-			}
-			.sh-mini { 
-				background-color: ${this.settings.miniSentenceColor}; 
-				color: ${miniTextColor};
-				border-radius: 3px;
-				padding: 1px 2px;
-			}
-			.sh-short { 
-				background-color: ${this.settings.shortSentenceColor}; 
-				color: ${shortTextColor};
-				border-radius: 3px;
-				padding: 1px 2px;
-			}
-			.sh-medium { 
-				background-color: ${this.settings.mediumSentenceColor}; 
-				color: ${mediumTextColor};
-				border-radius: 3px;
-				padding: 1px 2px;
-			}
-			.sh-long { 
-				background-color: ${this.settings.longSentenceColor}; 
-				color: ${longTextColor};
-				border-radius: 3px;
-				padding: 1px 2px;
-			}
-		`;
+		};
+
+		style.textContent = generateSentenceStyles();
 		document.head.appendChild(style);
 	}
 }
@@ -714,129 +800,33 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName("Short sentence threshold")
-			.setDesc(
-				"Number of words or less to be considered a short sentence",
-			)
-			.addExtraButton((button) =>
-				button
-					.setIcon("reset")
-					.setTooltip("Reset to default threshold")
-					.onClick(async () => {
-						this.plugin.settings.shortThreshold =
-							DEFAULT_SETTINGS.shortThreshold;
-						await this.plugin.saveSettings();
-						this.display();
-					}),
-			)
-			.addText((text) =>
-				text
-					.setPlaceholder(DEFAULT_SETTINGS.shortThreshold.toString())
-					.setValue(this.plugin.settings.shortThreshold.toString())
+			.setName("Sentence marking style")
+			.setDesc("Choose how sentences are visually marked")
+			.addDropdown((dropdown) => {
+				dropdown.addOption(
+					SentenceMarkingStyle.HIGHLIGHTING,
+					"Highlighting",
+				);
+				dropdown.addOption(
+					SentenceMarkingStyle.TEXT_COLOR,
+					"Text Color",
+				);
+				dropdown.addOption(
+					SentenceMarkingStyle.COLOR_UNDERLINING,
+					"Color Underlining",
+				);
+				dropdown
+					.setValue(this.plugin.settings.markingStyle)
 					.onChange(async (value) => {
-						if (value == "") {
-							this.plugin.settings.shortThreshold =
-								DEFAULT_SETTINGS.shortThreshold;
-							await this.plugin.saveSettings();
-							return;
-						}
-						const numValue = parseInt(value);
-						if (isNaN(numValue) || numValue <= 0) {
-							new Notice("Short threshold must be a positive number. Reverting to previous value.");
-							this.display(); // Revert to previous value by refreshing
-							return;
-						}
-						this.plugin.settings.shortThreshold = numValue;
+						this.plugin.settings.markingStyle =
+							value as SentenceMarkingStyle;
 						await this.plugin.saveSettings();
-					}),
-			);
-		new Setting(containerEl)
-			.setName("Medium sentence threshold")
-			.setDesc(
-				"Number of words between short and long thresholds to be considered a medium sentence",
-			)
-			.addExtraButton((button) =>
-				button
-					.setIcon("reset")
-					.setTooltip("Reset to default threshold")
-					.onClick(async () => {
-						this.plugin.settings.mediumThreshold =
-							DEFAULT_SETTINGS.mediumThreshold;
-						await this.plugin.saveSettings();
-						this.display();
-					}),
-			)
-			.addText((text) =>
-				text
-					.setPlaceholder(DEFAULT_SETTINGS.mediumThreshold.toString())
-					.setValue(this.plugin.settings.mediumThreshold.toString())
-					.onChange(async (value) => {
-						if (value == "") {
-							this.plugin.settings.mediumThreshold =
-								DEFAULT_SETTINGS.mediumThreshold;
-							await this.plugin.saveSettings();
-							return;
-						}
-						const numValue = parseInt(value);
-						if (isNaN(numValue) || numValue <= 0) {
-							new Notice("Medium threshold must be a positive number. Reverting to previous value.");
-							this.display(); // Revert to previous value by refreshing
-							return;
-						}
-						this.plugin.settings.mediumThreshold = numValue;
-						await this.plugin.saveSettings();
-					}),
-			);
-		new Setting(containerEl)
-			.setName("Long sentence threshold")
-			.setDesc("Number of words or more to be considered a long sentence")
-			.addExtraButton((button) =>
-				button
-					.setIcon("reset")
-					.setTooltip("Reset to default threshold")
-					.onClick(async () => {
-						this.plugin.settings.longThreshold =
-							DEFAULT_SETTINGS.longThreshold;
-						await this.plugin.saveSettings();
-						this.display();
-					}),
-			)
-			.addText((text) =>
-				text
-					.setPlaceholder(DEFAULT_SETTINGS.longThreshold.toString())
-					.setValue(this.plugin.settings.longThreshold.toString())
-					.onChange(async (value) => {
-						if (value == "") {
-							this.plugin.settings.longThreshold =
-								DEFAULT_SETTINGS.longThreshold;
-							await this.plugin.saveSettings();
-							return;
-						}
-						const numValue = parseInt(value);
-						if (isNaN(numValue) || numValue <= 0) {
-							new Notice("Long threshold must be a positive number. Reverting to previous value.");
-							this.display(); // Revert to previous value by refreshing
-							return;
-						}
-						this.plugin.settings.longThreshold = numValue;
-						await this.plugin.saveSettings();
-					}),
-			);
+					});
+			});
+
 		new Setting(containerEl)
 			.setName("Color Palette")
 			.setDesc("Choose from popular code editor color schemes")
-			.addExtraButton((button) =>
-				button
-					.setIcon("reset")
-					.setTooltip("Reset to default palette")
-					.onClick(async () => {
-						this.plugin.settings.colorPalette =
-							DEFAULT_SETTINGS.colorPalette;
-						this.applyPalette(DEFAULT_SETTINGS.colorPalette);
-						await this.plugin.saveSettings();
-						this.display();
-					}),
-			)
 			.addDropdown((dropdown) => {
 				Object.keys(COLOR_PALETTES).forEach((key) => {
 					dropdown.addOption(
@@ -922,6 +912,121 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.longSentenceColor)
 					.onChange(async (value) => {
 						this.plugin.settings.longSentenceColor = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+		new Setting(containerEl)
+			.setName("Short sentence threshold")
+			.setDesc(
+				"Number of words or less to be considered a short sentence",
+			)
+			.addExtraButton((button) =>
+				button
+					.setIcon("reset")
+					.setTooltip("Reset to default threshold")
+					.onClick(async () => {
+						this.plugin.settings.shortThreshold =
+							DEFAULT_SETTINGS.shortThreshold;
+						await this.plugin.saveSettings();
+						this.display();
+					}),
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder(DEFAULT_SETTINGS.shortThreshold.toString())
+					.setValue(this.plugin.settings.shortThreshold.toString())
+					.onChange(async (value) => {
+						if (value == "") {
+							this.plugin.settings.shortThreshold =
+								DEFAULT_SETTINGS.shortThreshold;
+							await this.plugin.saveSettings();
+							return;
+						}
+						const numValue = parseInt(value);
+						if (isNaN(numValue) || numValue <= 0) {
+							new Notice(
+								"Short threshold must be a positive number. Reverting to previous value.",
+							);
+							this.display(); // Revert to previous value by refreshing
+							return;
+						}
+						this.plugin.settings.shortThreshold = numValue;
+						await this.plugin.saveSettings();
+					}),
+			);
+		new Setting(containerEl)
+			.setName("Medium sentence threshold")
+			.setDesc(
+				"Number of words between short and long thresholds to be considered a medium sentence",
+			)
+			.addExtraButton((button) =>
+				button
+					.setIcon("reset")
+					.setTooltip("Reset to default threshold")
+					.onClick(async () => {
+						this.plugin.settings.mediumThreshold =
+							DEFAULT_SETTINGS.mediumThreshold;
+						await this.plugin.saveSettings();
+						this.display();
+					}),
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder(DEFAULT_SETTINGS.mediumThreshold.toString())
+					.setValue(this.plugin.settings.mediumThreshold.toString())
+					.onChange(async (value) => {
+						if (value == "") {
+							this.plugin.settings.mediumThreshold =
+								DEFAULT_SETTINGS.mediumThreshold;
+							await this.plugin.saveSettings();
+							return;
+						}
+						const numValue = parseInt(value);
+						if (isNaN(numValue) || numValue <= 0) {
+							new Notice(
+								"Medium threshold must be a positive number. Reverting to previous value.",
+							);
+							this.display(); // Revert to previous value by refreshing
+							return;
+						}
+						this.plugin.settings.mediumThreshold = numValue;
+						await this.plugin.saveSettings();
+					}),
+			);
+		new Setting(containerEl)
+			.setName("Long sentence threshold")
+			.setDesc("Number of words or more to be considered a long sentence")
+			.addExtraButton((button) =>
+				button
+					.setIcon("reset")
+					.setTooltip("Reset to default threshold")
+					.onClick(async () => {
+						this.plugin.settings.longThreshold =
+							DEFAULT_SETTINGS.longThreshold;
+						await this.plugin.saveSettings();
+						this.display();
+					}),
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder(DEFAULT_SETTINGS.longThreshold.toString())
+					.setValue(this.plugin.settings.longThreshold.toString())
+					.onChange(async (value) => {
+						if (value == "") {
+							this.plugin.settings.longThreshold =
+								DEFAULT_SETTINGS.longThreshold;
+							await this.plugin.saveSettings();
+							return;
+						}
+						const numValue = parseInt(value);
+						if (isNaN(numValue) || numValue <= 0) {
+							new Notice(
+								"Long threshold must be a positive number. Reverting to previous value.",
+							);
+							this.display(); // Revert to previous value by refreshing
+							return;
+						}
+						this.plugin.settings.longThreshold = numValue;
 						await this.plugin.saveSettings();
 					}),
 			);
