@@ -20,6 +20,7 @@ import {
  * Defines color schemes and thresholds for sentence highlighting.
  */
 interface MusicalTextSettings {
+	colorPalette: string;
 	miniSentenceColor: string;
 	shortSentenceColor: string;
 	mediumSentenceColor: string;
@@ -27,19 +28,117 @@ interface MusicalTextSettings {
 	shortThreshold: number;
 	mediumThreshold: number;
 	longThreshold: number;
-	// We'll keep a global default for new editors; individual editors override this.
 	defaultHighlightingEnabled: boolean;
 }
+
+interface ColorPalette {
+	name: string;
+	miniSentenceColor: string;
+	shortSentenceColor: string;
+	mediumSentenceColor: string;
+	longSentenceColor: string;
+}
+
+/**
+ * Color palettes from popular code editors
+ */
+const COLOR_PALETTES: Record<string, ColorPalette> = {
+	default: {
+		name: "Default",
+		miniSentenceColor: "#AF3029",
+		shortSentenceColor: "#BC5215",
+		mediumSentenceColor: "#AD8301",
+		longSentenceColor: "#66800B",
+	},
+	gruvbox: {
+		name: "Gruvbox",
+		miniSentenceColor: "#fb4934", // red
+		shortSentenceColor: "#fe8019", // orange
+		mediumSentenceColor: "#fabd2f", // yellow
+		longSentenceColor: "#b8bb26", // green
+	},
+	gruvboxDark: {
+		name: "Gruvbox Dark",
+		miniSentenceColor: "#cc241d", // dark red
+		shortSentenceColor: "#d65d0e", // dark orange
+		mediumSentenceColor: "#d79921", // dark yellow
+		longSentenceColor: "#98971a", // dark green
+	},
+	solarizedLight: {
+		name: "Solarized Light",
+		miniSentenceColor: "#dc322f", // red
+		shortSentenceColor: "#cb4b16", // orange
+		mediumSentenceColor: "#b58900", // yellow
+		longSentenceColor: "#859900", // green
+	},
+	solarizedDark: {
+		name: "Solarized Dark",
+		miniSentenceColor: "#dc322f", // red
+		shortSentenceColor: "#cb4b16", // orange
+		mediumSentenceColor: "#b58900", // yellow
+		longSentenceColor: "#859900", // green
+	},
+	tokyoNight: {
+		name: "Tokyo Night",
+		miniSentenceColor: "#f7768e", // red
+		shortSentenceColor: "#ff9e64", // orange
+		mediumSentenceColor: "#e0af68", // yellow
+		longSentenceColor: "#9ece6a", // green
+	},
+	tokyoNightStorm: {
+		name: "Tokyo Night Storm",
+		miniSentenceColor: "#f7768e", // red
+		shortSentenceColor: "#ff9e64", // orange
+		mediumSentenceColor: "#e0af68", // yellow
+		longSentenceColor: "#9ece6a", // green
+	},
+	dracula: {
+		name: "Dracula",
+		miniSentenceColor: "#ff5555", // red
+		shortSentenceColor: "#ffb86c", // orange
+		mediumSentenceColor: "#f1fa8c", // yellow
+		longSentenceColor: "#50fa7b", // green
+	},
+	nord: {
+		name: "Nord",
+		miniSentenceColor: "#bf616a", // red
+		shortSentenceColor: "#d08770", // orange
+		mediumSentenceColor: "#ebcb8b", // yellow
+		longSentenceColor: "#a3be8c", // green
+	},
+	oneDark: {
+		name: "One Dark",
+		miniSentenceColor: "#e06c75", // red
+		shortSentenceColor: "#d19a66", // orange
+		mediumSentenceColor: "#e5c07b", // yellow
+		longSentenceColor: "#98c379", // green
+	},
+	catppuccin: {
+		name: "Catppuccin",
+		miniSentenceColor: "#f38ba8", // red
+		shortSentenceColor: "#fab387", // orange
+		mediumSentenceColor: "#f9e2af", // yellow
+		longSentenceColor: "#a6e3a1", // green
+	},
+	monokai: {
+		name: "Monokai",
+		miniSentenceColor: "#f92672", // red
+		shortSentenceColor: "#fd971f", // orange
+		mediumSentenceColor: "#e6db74", // yellow
+		longSentenceColor: "#a6e22e", // green
+	},
+};
 
 /**
  * Default settings for the Musical Text plugin.
  * Provides initial values for colors and thresholds.
  */
 const DEFAULT_SETTINGS: MusicalTextSettings = {
-	miniSentenceColor: "#AF3029", // light cyan
-	shortSentenceColor: "#BC5215", // light blue
-	mediumSentenceColor: "#AD8301", // light orange
-	longSentenceColor: "#66800B", // light red
+	colorPalette: "default",
+	miniSentenceColor: COLOR_PALETTES.default.miniSentenceColor,
+	shortSentenceColor: COLOR_PALETTES.default.shortSentenceColor,
+	mediumSentenceColor: COLOR_PALETTES.default.mediumSentenceColor,
+	longSentenceColor: COLOR_PALETTES.default.longSentenceColor,
 	shortThreshold: 5, // words
 	mediumThreshold: 7, // words
 	longThreshold: 9, // words
@@ -442,6 +541,7 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
+
 		new Setting(containerEl)
 			.setName("Short sentence threshold")
 			.setDesc(
@@ -452,7 +552,8 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 					.setIcon("reset")
 					.setTooltip("Reset to default threshold")
 					.onClick(async () => {
-						this.plugin.settings.shortThreshold = DEFAULT_SETTINGS.shortThreshold;
+						this.plugin.settings.shortThreshold =
+							DEFAULT_SETTINGS.shortThreshold;
 						await this.plugin.saveSettings();
 						this.display();
 					}),
@@ -487,7 +588,8 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 					.setIcon("reset")
 					.setTooltip("Reset to default threshold")
 					.onClick(async () => {
-						this.plugin.settings.mediumThreshold = DEFAULT_SETTINGS.mediumThreshold;
+						this.plugin.settings.mediumThreshold =
+							DEFAULT_SETTINGS.mediumThreshold;
 						await this.plugin.saveSettings();
 						this.display();
 					}),
@@ -520,7 +622,8 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 					.setIcon("reset")
 					.setTooltip("Reset to default threshold")
 					.onClick(async () => {
-						this.plugin.settings.longThreshold = DEFAULT_SETTINGS.longThreshold;
+						this.plugin.settings.longThreshold =
+							DEFAULT_SETTINGS.longThreshold;
 						await this.plugin.saveSettings();
 						this.display();
 					}),
@@ -546,18 +649,44 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 					}),
 			);
 		new Setting(containerEl)
+			.setName("Color Palette")
+			.setDesc("Choose from popular code editor color schemes")
+			.addExtraButton((button) =>
+				button
+					.setIcon("reset")
+					.setTooltip("Reset to default palette")
+					.onClick(async () => {
+						this.plugin.settings.colorPalette =
+							DEFAULT_SETTINGS.colorPalette;
+						this.applyPalette(DEFAULT_SETTINGS.colorPalette);
+						await this.plugin.saveSettings();
+						this.display();
+					}),
+			)
+			.addDropdown((dropdown) => {
+				Object.keys(COLOR_PALETTES).forEach((key) => {
+					dropdown.addOption(
+						key,
+						COLOR_PALETTES[key as keyof typeof COLOR_PALETTES].name,
+					);
+				});
+				dropdown
+					.setValue(this.plugin.settings.colorPalette)
+					.onChange(async (value) => {
+						this.plugin.settings.colorPalette = value;
+						this.applyPalette(value);
+						await this.plugin.saveSettings();
+						this.display();
+					});
+			});
+		new Setting(containerEl)
 			.setName("Mini sentence color")
 			.setDesc("Color for sentences below the short threshold")
 			.addExtraButton((button) =>
 				button
 					.setIcon("reset")
-					.setTooltip("Reset to default color")
-					.onClick(async () => {
-						this.plugin.settings.miniSentenceColor =
-							DEFAULT_SETTINGS.miniSentenceColor;
-						await this.plugin.saveSettings();
-						this.display();
-					}),
+					.setTooltip("Reset to palette color")
+					.onClick(this.createColorResetHandler("miniSentenceColor")),
 			)
 			.addColorPicker((cp) =>
 				cp
@@ -573,13 +702,10 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 			.addExtraButton((button) =>
 				button
 					.setIcon("reset")
-					.setTooltip("Reset to default color")
-					.onClick(async () => {
-						this.plugin.settings.shortSentenceColor =
-							DEFAULT_SETTINGS.shortSentenceColor;
-						await this.plugin.saveSettings();
-						this.display();
-					}),
+					.setTooltip("Reset to palette color")
+					.onClick(
+						this.createColorResetHandler("shortSentenceColor"),
+					),
 			)
 			.addColorPicker((cp) =>
 				cp
@@ -595,13 +721,10 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 			.addExtraButton((button) =>
 				button
 					.setIcon("reset")
-					.setTooltip("Reset to default color")
-					.onClick(async () => {
-						this.plugin.settings.mediumSentenceColor =
-							DEFAULT_SETTINGS.mediumSentenceColor;
-						await this.plugin.saveSettings();
-						this.display();
-					}),
+					.setTooltip("Reset to palette color")
+					.onClick(
+						this.createColorResetHandler("mediumSentenceColor"),
+					),
 			)
 			.addColorPicker((cp) =>
 				cp
@@ -617,13 +740,8 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 			.addExtraButton((button) =>
 				button
 					.setIcon("reset")
-					.setTooltip("Reset to default color")
-					.onClick(async () => {
-						this.plugin.settings.longSentenceColor =
-							DEFAULT_SETTINGS.longSentenceColor;
-						await this.plugin.saveSettings();
-						this.display();
-					}),
+					.setTooltip("Reset to palette color")
+					.onClick(this.createColorResetHandler("longSentenceColor")),
 			)
 			.addColorPicker((cp) =>
 				cp
@@ -633,5 +751,41 @@ class SentenceHighlighterSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
+	}
+
+	private applyPalette(paletteKey: string) {
+		const palette =
+			COLOR_PALETTES[paletteKey as keyof typeof COLOR_PALETTES];
+		if (palette) {
+			this.plugin.settings.miniSentenceColor = palette.miniSentenceColor;
+			this.plugin.settings.shortSentenceColor =
+				palette.shortSentenceColor;
+			this.plugin.settings.mediumSentenceColor =
+				palette.mediumSentenceColor;
+			this.plugin.settings.longSentenceColor = palette.longSentenceColor;
+		}
+	}
+
+	private createColorResetHandler(
+		colorProperty: keyof Pick<
+			MusicalTextSettings,
+			| "miniSentenceColor"
+			| "shortSentenceColor"
+			| "mediumSentenceColor"
+			| "longSentenceColor"
+		>,
+	) {
+		return async () => {
+			const palette =
+				COLOR_PALETTES[
+					this.plugin.settings
+						.colorPalette as keyof typeof COLOR_PALETTES
+				];
+			if (palette) {
+				this.plugin.settings[colorProperty] = palette[colorProperty];
+				await this.plugin.saveSettings();
+				this.display();
+			}
+		};
 	}
 }
