@@ -130,9 +130,9 @@ export const DEFAULT_SETTINGS: MusicalTextSettings = {
 	shortSentenceColor: COLOR_PALETTES.default.shortSentenceColor,
 	mediumSentenceColor: COLOR_PALETTES.default.mediumSentenceColor,
 	longSentenceColor: COLOR_PALETTES.default.longSentenceColor,
-	shortThreshold: 5, // words
+	shortThreshold: 4, // words
 	mediumThreshold: 7, // words
-	longThreshold: 9, // words
+	longThreshold: 12, // words
 	defaultHighlightingEnabled: false,
 };
 
