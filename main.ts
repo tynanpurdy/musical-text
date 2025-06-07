@@ -1,9 +1,6 @@
 /**
  * Musical Text Plugin for Obsidian
- * 
- * Main plugin file that orchestrates sentence highlighting functionality.
- * This file focuses on core plugin logic while delegating specific concerns
- * to separate modules.
+ * Provides sentence highlighting with customizable colors and styles.
  */
 
 import {
@@ -167,98 +164,45 @@ export default class MusicalTextPlugin extends Plugin {
 		}
 	}
 
-	/**
-	 * Returns the active editor from the active MarkdownView.
-	 */
-	private getEditorFromActiveView(): Editor | null {
-		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-		return activeView ? activeView.editor : null;
-	}
 
-	/**
-	 * Helper method to get the EditorView from either an Editor instance or from the active view
-	 * @param editor Optional editor instance. If not provided, gets from active view
-	 * @returns EditorView instance or null if not found
-	 */
+
+	/** Gets CodeMirror EditorView from Editor or active view */
 	private getEditorView(editor?: Editor): EditorView | null {
-		if (editor) {
-			return (editor as any).cm;
-		}
-
-		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-		return activeView ? (activeView.editor as any).cm : null;
+		const targetEditor = editor || this.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
+		return targetEditor ? (targetEditor as any).cm : null;
 	}
 
-	/**
-	 * Updates the highlighting state for a given editor.
-	 * @param editor The editor whose state to update.
-	 * @param newState The new highlighting state.
-	 */
-	private updateHighlightingState(editor: Editor, newState: boolean): void {
-		const cm = this.getEditorView(editor);
-		if (cm) {
-			this.editorHighlightingMap.set(cm, newState);
-		}
-	}
 
-	/**
-	 * Applies highlighting or clears decorations based on the provided state.
-	 * @param editor The editor to update.
-	 * @param state True to refresh highlighting; false to clear decorations.
-	 */
-	private applyHighlightingToEditor(editor: Editor, state: boolean): void {
+
+	/** Applies or clears highlighting for the given editor */
+	private applyHighlightingToEditor(editor: Editor, enabled: boolean): void {
 		const cm = this.getEditorView(editor);
 		if (!cm) return;
 
-		if (state) {
-			// Compute initial decorations for visible ranges
-			const builder = new RangeSetBuilder<Decoration>();
-			for (const range of cm.visibleRanges) {
-				const visibleText = cm.state.doc.sliceString(
-					range.from,
-					range.to,
-				);
-				const decorations = computeDecorations(
-					visibleText,
-					this.settings,
-					range.from,
-				);
-
-				const iter = decorations.iter();
-				while (iter.value) {
-					builder.add(iter.from, iter.to, iter.value);
-					iter.next();
-				}
-			}
-
-			cm.dispatch({
-				effects: sentenceHighlightEffect.of(builder.finish()),
-			});
+		if (enabled) {
+			this.refreshHighlighting(editor);
 		} else {
-			cm.dispatch({
-				effects: sentenceHighlightEffect.of(RangeSet.empty),
-			});
+			cm.dispatch({ effects: sentenceHighlightEffect.of(RangeSet.empty) });
 		}
 	}
 
-	/**
-	 * Toggles highlighting only for the active editor.
-	 */
+	/** Toggles highlighting for the active editor */
 	private async toggleHighlighting(statusBarItem: HTMLElement) {
-		const editor = this.getEditorFromActiveView();
+		const editor = this.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
 		if (!editor) return;
-		const cm: EditorView = (editor as any).cm;
+		
+		const cm = this.getEditorView(editor);
+		if (!cm) return;
+		
 		const currentState = this.editorHighlightingMap.get(cm) || false;
 		const newState = !currentState;
 
-		this.updateHighlightingState(editor, newState);
+		this.editorHighlightingMap.set(cm, newState);
 		this.updateStatusBar(statusBarItem);
 		this.applyHighlightingToEditor(editor, newState);
 	}
 
-	/**
-	 * Recomputes and dispatches the updated decorations for the visible ranges of the given editor.
-	 */
+	/** Recomputes decorations for visible ranges */
 	private refreshHighlighting(editor: Editor) {
 		const cm = this.getEditorView(editor);
 		if (!cm) return;
@@ -283,14 +227,9 @@ export default class MusicalTextPlugin extends Plugin {
 		cm.dispatch({ effects: sentenceHighlightEffect.of(fullDecorations) });
 	}
 
-	/**
-	 * Refreshes highlighting in all open editors that have highlighting enabled
-	 */
+	/** Refreshes highlighting in all editors with highlighting enabled */
 	private refreshAllActiveHighlighting() {
-		// Update CSS styles first
 		this.registerStyles();
-		
-		// Refresh highlighting in all open editors
 		this.app.workspace.iterateAllLeaves((leaf) => {
 			if (leaf.view instanceof MarkdownView) {
 				const editor = leaf.view.editor;

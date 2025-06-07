@@ -1,5 +1,5 @@
 /**
- * Sentence detection and markdown parsing utilities for the Musical Text plugin
+ * Sentence detection and markdown parsing for Musical Text highlighting
  */
 
 import { RangeSet, RangeSetBuilder } from "@codemirror/state";
@@ -7,20 +7,8 @@ import { Decoration } from "@codemirror/view";
 import { MusicalTextSettings, MarkdownListMarkerResult } from "./types";
 
 /**
- * Analyzes text and creates decorations for sentence highlighting.
- * Uses enhanced regex to identify sentence boundaries including:
- * - Traditional punctuation (periods, exclamations, questions)
- * - Line breaks (text ending at line boundaries)
- * - Paragraph breaks (text ending at paragraph boundaries)
- * - Markdown list items (excluding list markers from highlighting)
- * 
- * Decorations exclude leading and trailing whitespace to prevent
- * highlighting spaces between sentences.
- * 
- * @param text The text content to analyze
- * @param settings Plugin settings containing thresholds and styles
- * @param offset Position offset to adjust decoration positions
- * @returns A RangeSet containing the computed decorations
+ * Creates sentence highlighting decorations for text.
+ * Handles markdown lists and traditional sentence boundaries.
  */
 export function computeDecorations(
 	text: string,
@@ -29,30 +17,19 @@ export function computeDecorations(
 ): RangeSet<Decoration> {
 	const builder = new RangeSetBuilder<Decoration>();
 	
-	// Process text line by line to better handle markdown lists
 	const lines = text.split(/(\r?\n)/);
 	let currentOffset = 0;
 	
 	for (const line of lines) {
-		// Skip line break characters themselves
-		if (/^\r?\n$/.test(line)) {
+		if (/^\r?\n$/.test(line) || line.trim().length === 0) {
 			currentOffset += line.length;
 			continue;
 		}
 		
-		// Skip empty lines
-		if (line.trim().length === 0) {
-			currentOffset += line.length;
-			continue;
-		}
-		
-		// Check if this line is a markdown list
 		const listMarkerMatch = detectMarkdownListMarker(line.trim());
 		
 		if (listMarkerMatch) {
-			// This is a markdown list line - highlight only the content
 			const actualContent = listMarkerMatch.content;
-			
 			if (actualContent.length > 0) {
 				const wordCount = countWords(actualContent);
 				const className = getClassForSentence(wordCount, settings);
@@ -61,17 +38,14 @@ export function computeDecorations(
 					const lineStart = currentOffset + offset;
 					const leadingWhitespace = line.length - line.trimStart().length;
 					const contentStart = lineStart + leadingWhitespace + listMarkerMatch.markerLength;
-					const contentLength = actualContent.length;
-					const contentEnd = contentStart + contentLength;
+					const contentEnd = contentStart + actualContent.length;
 					
-					// Ensure we don't create invalid ranges
 					if (contentStart < contentEnd) {
 						builder.add(contentStart, contentEnd, Decoration.mark({ class: className }));
 					}
 				}
 			}
 		} else {
-			// Not a markdown list - use traditional sentence detection
 			const sentenceRegex = /([^.!?]*[.!?]+\s*|[^.!?\r\n]+(?=\r?\n|$))/g;
 			let match: RegExpExecArray | null;
 			
@@ -79,9 +53,7 @@ export function computeDecorations(
 				const sentence = match[0];
 				const trimmedSentence = sentence.trim();
 				
-				if (trimmedSentence.length === 0) {
-					continue;
-				}
+				if (trimmedSentence.length === 0) continue;
 				
 				const wordCount = countWords(trimmedSentence);
 				const className = getClassForSentence(wordCount, settings);
@@ -106,15 +78,9 @@ export function computeDecorations(
 	return builder.finish();
 }
 
-/**
- * Detects markdown list markers and extracts content
- * @param line The line to process
- * @returns Object with content (without markers) and marker length, or null if no marker found
- */
+/** Detects markdown list markers and extracts content */
 export function detectMarkdownListMarker(line: string): MarkdownListMarkerResult | null {
-	// More explicit regex patterns for different markdown list types (order matters!)
-	
-	// First, try checkboxes (must come first to avoid conflict with unordered lists)
+	// Checkboxes (must be first to avoid conflict with unordered lists)
 	const checkboxMatch = line.match(/^(\s*[-*+]\s*\[[xX\s]\]\s*)(.*)$/);
 	if (checkboxMatch) {
 		return { 
@@ -123,23 +89,18 @@ export function detectMarkdownListMarker(line: string): MarkdownListMarkerResult
 		};
 	}
 	
-	// Then try ordered lists - be very explicit about the pattern
+	// Ordered lists
 	const orderedMatch = line.match(/^(\s*)(\d+)(\.)(\s+)(.*)$/);
 	if (orderedMatch) {
-		const indentation = orderedMatch[1]; // leading whitespace
-		const number = orderedMatch[2]; // the number
-		const dot = orderedMatch[3]; // the dot
-		const spaces = orderedMatch[4]; // spaces after dot
-		const content = orderedMatch[5]; // content
-		
-		const markerLength = indentation.length + number.length + dot.length + spaces.length;
+		const markerLength = orderedMatch[1].length + orderedMatch[2].length + 
+			orderedMatch[3].length + orderedMatch[4].length;
 		return { 
-			content: content.trim(), 
+			content: orderedMatch[5].trim(), 
 			markerLength: markerLength 
 		};
 	}
 	
-	// Finally try unordered lists
+	// Unordered lists
 	const unorderedMatch = line.match(/^(\s*[-*+]\s+)(.*)$/);
 	if (unorderedMatch) {
 		return { 
@@ -148,25 +109,15 @@ export function detectMarkdownListMarker(line: string): MarkdownListMarkerResult
 		};
 	}
 	
-	// No markdown markers found
 	return null;
 }
 
-/**
- * Counts the number of words in a sentence using word boundary matching.
- * @param sentence The sentence to analyze
- * @returns Number of words found in the sentence
- */
+/** Counts words in a sentence using word boundary matching */
 export function countWords(sentence: string): number {
 	return (sentence.match(/\b\w+\b/g) || []).length;
 }
 
-/**
- * Determines the appropriate CSS class for a sentence based on its word count.
- * @param wordCount Number of words in the sentence
- * @param settings Plugin settings containing thresholds
- * @returns CSS class name for styling the sentence
- */
+/** Returns CSS class for sentence based on word count and thresholds */
 export function getClassForSentence(
 	wordCount: number,
 	settings: MusicalTextSettings,

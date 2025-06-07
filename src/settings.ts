@@ -1,5 +1,5 @@
 /**
- * Settings and configuration for the Musical Text plugin
+ * Settings and configuration for Musical Text plugin
  */
 
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
@@ -10,9 +10,7 @@ import {
 } from "./types";
 import MusicalTextPlugin from "../main";
 
-/**
- * Color palettes from popular code editors
- */
+/** Popular code editor color palettes */
 export const COLOR_PALETTES: Record<string, ColorPalette> = {
 	default: {
 		name: "Default",
@@ -21,82 +19,103 @@ export const COLOR_PALETTES: Record<string, ColorPalette> = {
 		mediumSentenceColor: "#AD8301",
 		longSentenceColor: "#66800B",
 	},
-	gruvbox: {
-		name: "Gruvbox",
-		miniSentenceColor: "#fb4934", // red
-		shortSentenceColor: "#fe8019", // orange
-		mediumSentenceColor: "#fabd2f", // yellow
-		longSentenceColor: "#b8bb26", // green
+	github: {
+		name: "Github",
+		miniSentenceColor: "#F87683",
+		shortSentenceColor: "#DCDCAA",
+		mediumSentenceColor: "#4EC9B0",
+		longSentenceColor: "#4FC1FF",
 	},
-	gruvboxDark: {
-		name: "Gruvbox Dark",
-		miniSentenceColor: "#cc241d", // dark red
-		shortSentenceColor: "#d65d0e", // dark orange
-		mediumSentenceColor: "#d79921", // dark yellow
-		longSentenceColor: "#98971a", // dark green
+	oneDarkPro: {
+		name: "One Dark Pro",
+		miniSentenceColor: "#E06C75",
+		shortSentenceColor: "#E5C07B",
+		mediumSentenceColor: "#98C379",
+		longSentenceColor: "#61AFEE",
 	},
-	solarizedLight: {
-		name: "Solarized Light",
-		miniSentenceColor: "#dc322f", // red
-		shortSentenceColor: "#cb4b16", // orange
-		mediumSentenceColor: "#b58900", // yellow
-		longSentenceColor: "#859900", // green
+	ayu: {
+		name: "Ayu",
+		miniSentenceColor: "#FF8F40",
+		shortSentenceColor: "#FFB454",
+		mediumSentenceColor: "#ABD94B",
+		longSentenceColor: "#D2A6FF",
 	},
-	solarizedDark: {
-		name: "Solarized Dark",
-		miniSentenceColor: "#dc322f", // red
-		shortSentenceColor: "#cb4b16", // orange
-		mediumSentenceColor: "#b58900", // yellow
-		longSentenceColor: "#859900", // green
+	ayuLight: {
+		name: "Ayu Light",
+		miniSentenceColor: "#FA8D3F",
+		shortSentenceColor: "#F2AE49",
+		mediumSentenceColor: "#85B300",
+		longSentenceColor: "#A37ACC",
+	},
+	monokaiDark: {
+		name: "Monokai Dark",
+		miniSentenceColor: "#FF6188",
+		shortSentenceColor: "#FFD966",
+		mediumSentenceColor: "#A8DC76",
+		longSentenceColor: "#78DCE8",
+	},
+	monokaiLight: {
+		name: "Monokai Light",
+		miniSentenceColor: "#E14774",
+		shortSentenceColor: "#CC7A0A",
+		mediumSentenceColor: "#269D69",
+		longSentenceColor: "#1C8CA8",
 	},
 	tokyoNight: {
 		name: "Tokyo Night",
-		miniSentenceColor: "#f7768e", // red
-		shortSentenceColor: "#ff9e64", // orange
-		mediumSentenceColor: "#e0af68", // yellow
-		longSentenceColor: "#9ece6a", // green
+		miniSentenceColor: "#FF9D65",
+		shortSentenceColor: "#9ECE6A",
+		mediumSentenceColor: "#7AA2F7",
+		longSentenceColor: "#BB9AF7",
 	},
-	tokyoNightStorm: {
-		name: "Tokyo Night Storm",
-		miniSentenceColor: "#f7768e", // red
-		shortSentenceColor: "#ff9e64", // orange
-		mediumSentenceColor: "#e0af68", // yellow
-		longSentenceColor: "#9ece6a", // green
+	tokyoNightLight: {
+		name: "Tokyo Night Light",
+		miniSentenceColor: "#965027",
+		shortSentenceColor: "#385F0C",
+		mediumSentenceColor: "#2859A9",
+		longSentenceColor: "#66359E",
 	},
 	dracula: {
 		name: "Dracula",
-		miniSentenceColor: "#ff5555", // red
-		shortSentenceColor: "#ffb86c", // orange
-		mediumSentenceColor: "#f1fa8c", // yellow
-		longSentenceColor: "#50fa7b", // green
+		miniSentenceColor: "#FF79C6",
+		shortSentenceColor: "#E9F284",
+		mediumSentenceColor: "#4FFA7B",
+		longSentenceColor: "#BC93F9",
 	},
 	nord: {
 		name: "Nord",
-		miniSentenceColor: "#bf616a", // red
-		shortSentenceColor: "#d08770", // orange
-		mediumSentenceColor: "#ebcb8b", // yellow
-		longSentenceColor: "#a3be8c", // green
+		miniSentenceColor: "#A3BE8C",
+		shortSentenceColor: "#88C1D0",
+		mediumSentenceColor: "#81A1C1",
+		longSentenceColor: "#B48EAD",
 	},
-	oneDark: {
-		name: "One Dark",
-		miniSentenceColor: "#e06c75", // red
-		shortSentenceColor: "#d19a66", // orange
-		mediumSentenceColor: "#e5c07b", // yellow
-		longSentenceColor: "#98c379", // green
+	catppuccinFrappe: {
+		name: "Catppuccin Frappé",
+		miniSentenceColor: "#EF9E76",
+		shortSentenceColor: "#A6D189",
+		mediumSentenceColor: "#8CAAEE",
+		longSentenceColor: "#CA9EE6",
 	},
-	catppuccin: {
-		name: "Catppuccin",
-		miniSentenceColor: "#f38ba8", // red
-		shortSentenceColor: "#fab387", // orange
-		mediumSentenceColor: "#f9e2af", // yellow
-		longSentenceColor: "#a6e3a1", // green
+	catppuccinMacchiato: {
+		name: "Catppuccin Macchiato",
+		miniSentenceColor: "#F5A97F",
+		shortSentenceColor: "#A6DA95",
+		mediumSentenceColor: "#8AADF4",
+		longSentenceColor: "#C6A0F6",
 	},
-	monokai: {
-		name: "Monokai",
-		miniSentenceColor: "#f92672", // red
-		shortSentenceColor: "#fd971f", // orange
-		mediumSentenceColor: "#e6db74", // yellow
-		longSentenceColor: "#a6e22e", // green
+	catppuccinLatte: {
+		name: "Catppuccin Latte",
+		miniSentenceColor: "#FE640C",
+		shortSentenceColor: "#40A02B",
+		mediumSentenceColor: "#1F65F5",
+		longSentenceColor: "#8839EF",
+	},
+	catppuccinMocha: {
+		name: "Catppuccin Mocha",
+		miniSentenceColor: "#FAB387",
+		shortSentenceColor: "#A6E3A1",
+		mediumSentenceColor: "#89B4FA",
+		longSentenceColor: "#CBA6F7",
 	},
 };
 
@@ -117,10 +136,7 @@ export const DEFAULT_SETTINGS: MusicalTextSettings = {
 	defaultHighlightingEnabled: false,
 };
 
-/**
- * Settings tab implementation for the Musical Text plugin.
- * Provides UI for configuring sentence thresholds and highlight colors.
- */
+/** Settings tab for configuring colors and thresholds */
 export class SentenceHighlighterSettingTab extends PluginSettingTab {
 	plugin: MusicalTextPlugin;
 
@@ -133,7 +149,6 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		// Ensure thresholds are valid before displaying
 		this.validateThresholds();
 
 		new Setting(containerEl)
@@ -146,11 +161,11 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 				);
 				dropdown.addOption(
 					SentenceMarkingStyle.TEXT_COLOR,
-					"Text Color",
+					"Text color",
 				);
 				dropdown.addOption(
 					SentenceMarkingStyle.COLOR_UNDERLINING,
-					"Color Underlining",
+					"Color underlining",
 				);
 				dropdown
 					.setValue(this.plugin.settings.markingStyle)
@@ -182,9 +197,7 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 		new Setting(containerEl).setName("Colors").setHeading();
 		new Setting(containerEl)
 			.setName("Mini sentence color")
-			.setDesc(
-				"Color for sentences below the short threshold (background, text, or underline depending on marking style)",
-			)
+			.setDesc("Color for very short sentences")
 			.addExtraButton((button) =>
 				button
 					.setIcon("reset")
@@ -201,9 +214,7 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 			);
 		new Setting(containerEl)
 			.setName("Short sentence color")
-			.setDesc(
-				"Color for short sentences (background, text, or underline depending on marking style)",
-			)
+			.setDesc("Color for short sentences")
 			.addExtraButton((button) =>
 				button
 					.setIcon("reset")
@@ -222,9 +233,7 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 			);
 		new Setting(containerEl)
 			.setName("Medium sentence color")
-			.setDesc(
-				"Color for medium sentences (background, text, or underline depending on marking style)",
-			)
+			.setDesc("Color for medium sentences")
 			.addExtraButton((button) =>
 				button
 					.setIcon("reset")
@@ -243,9 +252,7 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 			);
 		new Setting(containerEl)
 			.setName("Long sentence color")
-			.setDesc(
-				"Color for long sentences (background, text, or underline depending on marking style)",
-			)
+			.setDesc("Color for long sentences")
 			.addExtraButton((button) =>
 				button
 					.setIcon("reset")
@@ -298,7 +305,7 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Medium sentence threshold")
 			.setDesc(
-				`Number of words between short and long thresholds to be considered a medium sentence (current: ${this.plugin.settings.mediumThreshold} words)`,
+				`Medium sentence word count (current: ${this.plugin.settings.mediumThreshold})`,
 			)
 			.addExtraButton((button) =>
 				button
@@ -332,7 +339,7 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 			);
 		new Setting(containerEl)
 			.setName("Long sentence threshold")
-			.setDesc(`Number of words or more to be considered a long sentence`)
+			.setDesc("Long sentence word count")
 			.addExtraButton((button) =>
 				button
 					.setIcon("reset")
@@ -349,10 +356,9 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 					.setPlaceholder(DEFAULT_SETTINGS.longThreshold.toString())
 					.setValue(this.plugin.settings.longThreshold.toString());
 
-				// Validation function to avoid duplication
 				const validateAndSave = async () => {
 					const value = textComponent.getValue();
-					if (value == "") {
+					if (value === "") {
 						this.plugin.settings.longThreshold =
 							DEFAULT_SETTINGS.longThreshold;
 						await this.plugin.saveSettings();
@@ -365,9 +371,9 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 						numValue <= this.plugin.settings.mediumThreshold
 					) {
 						new Notice(
-							`Long threshold must be greater than medium threshold (${this.plugin.settings.mediumThreshold}). Reverting to previous value.`,
+							`Long threshold must be greater than ${this.plugin.settings.mediumThreshold}`,
 						);
-						this.display(); // Revert to previous value by refreshing
+						this.display();
 						return;
 					}
 					this.plugin.settings.longThreshold = numValue;
@@ -375,14 +381,9 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 					this.display();
 				};
 
-				// Use blur event instead of change to allow complete typing
 				textComponent.inputEl.addEventListener("blur", validateAndSave);
-
-				// Also validate on Enter key
 				textComponent.inputEl.addEventListener("keydown", (e) => {
-					if (e.key === "Enter") {
-						validateAndSave();
-					}
+					if (e.key === "Enter") validateAndSave();
 				});
 
 				return textComponent;
@@ -390,40 +391,18 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 	}
 
 	private validateThresholds(): void {
-		// Ensure thresholds are in correct order: short < medium < long
-		// Also ensure minimum viable ranges for sliders
+		const { settings } = this.plugin;
 
-		// Ensure medium is at least short + 1 (minimum 2)
-		if (
-			this.plugin.settings.mediumThreshold <=
-			this.plugin.settings.shortThreshold
-		) {
-			this.plugin.settings.mediumThreshold = Math.max(
-				2,
-				this.plugin.settings.shortThreshold + 1,
-			);
+		if (settings.mediumThreshold <= settings.shortThreshold) {
+			settings.mediumThreshold = Math.max(2, settings.shortThreshold + 1);
 		}
 
-		// Ensure long is at least medium + 1 (minimum 3)
-		if (
-			this.plugin.settings.longThreshold <=
-			this.plugin.settings.mediumThreshold
-		) {
-			this.plugin.settings.longThreshold = Math.max(
-				3,
-				this.plugin.settings.mediumThreshold + 1,
-			);
+		if (settings.longThreshold <= settings.mediumThreshold) {
+			settings.longThreshold = Math.max(3, settings.mediumThreshold + 1);
 		}
 
-		// Ensure short is at least 1 but less than medium
-		if (
-			this.plugin.settings.shortThreshold >=
-			this.plugin.settings.mediumThreshold
-		) {
-			this.plugin.settings.shortThreshold = Math.max(
-				1,
-				this.plugin.settings.mediumThreshold - 1,
-			);
+		if (settings.shortThreshold >= settings.mediumThreshold) {
+			settings.shortThreshold = Math.max(1, settings.mediumThreshold - 1);
 		}
 	}
 
