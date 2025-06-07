@@ -3,12 +3,7 @@
  * Provides sentence highlighting with customizable colors and styles.
  */
 
-import {
-	Plugin,
-	Editor,
-	MarkdownView,
-	setIcon,
-} from "obsidian";
+import { Plugin, Editor, MarkdownView, setIcon } from "obsidian";
 import { EditorView, Decoration } from "@codemirror/view";
 import {
 	StateField,
@@ -21,7 +16,10 @@ import {
 import { MusicalTextSettings, SentenceMarkingStyle } from "./src/types";
 import { getContrastingTextColor } from "./src/color-utils";
 import { computeDecorations } from "./src/sentence-detection";
-import { DEFAULT_SETTINGS, SentenceHighlighterSettingTab } from "./src/settings";
+import {
+	DEFAULT_SETTINGS,
+	SentenceHighlighterSettingTab,
+} from "./src/settings";
 
 /**
  * CodeMirror state effect for updating sentence highlighting decorations.
@@ -164,15 +162,13 @@ export default class MusicalTextPlugin extends Plugin {
 		}
 	}
 
-
-
 	/** Gets CodeMirror EditorView from Editor or active view */
 	private getEditorView(editor?: Editor): EditorView | null {
-		const targetEditor = editor || this.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
+		const targetEditor =
+			editor ||
+			this.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
 		return targetEditor ? (targetEditor as any).cm : null;
 	}
-
-
 
 	/** Applies or clears highlighting for the given editor */
 	private applyHighlightingToEditor(editor: Editor, enabled: boolean): void {
@@ -182,18 +178,21 @@ export default class MusicalTextPlugin extends Plugin {
 		if (enabled) {
 			this.refreshHighlighting(editor);
 		} else {
-			cm.dispatch({ effects: sentenceHighlightEffect.of(RangeSet.empty) });
+			cm.dispatch({
+				effects: sentenceHighlightEffect.of(RangeSet.empty),
+			});
 		}
 	}
 
 	/** Toggles highlighting for the active editor */
 	private async toggleHighlighting(statusBarItem: HTMLElement) {
-		const editor = this.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
+		const editor =
+			this.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
 		if (!editor) return;
-		
+
 		const cm = this.getEditorView(editor);
 		if (!cm) return;
-		
+
 		const currentState = this.editorHighlightingMap.get(cm) || false;
 		const newState = !currentState;
 
@@ -286,7 +285,7 @@ export default class MusicalTextPlugin extends Plugin {
 		}
 		const style = document.createElement("style");
 		style.id = "sentence-highlighter-styles";
-		
+
 		// Generate styles based on marking style preference
 		const generateSentenceStyles = () => {
 			const baseStyles = `
@@ -306,82 +305,99 @@ export default class MusicalTextPlugin extends Plugin {
 			switch (this.settings.markingStyle) {
 				case SentenceMarkingStyle.HIGHLIGHTING: {
 					// Generate contrasting text colors for background highlighting
-					const miniTextColor = getContrastingTextColor(this.settings.miniSentenceColor);
-					const shortTextColor = getContrastingTextColor(this.settings.shortSentenceColor);
-					const mediumTextColor = getContrastingTextColor(this.settings.mediumSentenceColor);
-					const longTextColor = getContrastingTextColor(this.settings.longSentenceColor);
-					
-					return baseStyles + `
-						.sh-mini { 
-							background-color: ${this.settings.miniSentenceColor}; 
+					const miniTextColor = getContrastingTextColor(
+						this.settings.miniSentenceColor,
+					);
+					const shortTextColor = getContrastingTextColor(
+						this.settings.shortSentenceColor,
+					);
+					const mediumTextColor = getContrastingTextColor(
+						this.settings.mediumSentenceColor,
+					);
+					const longTextColor = getContrastingTextColor(
+						this.settings.longSentenceColor,
+					);
+
+					return (
+						baseStyles +
+						`
+						.sh-mini {
+							background-color: ${this.settings.miniSentenceColor};
 							color: ${miniTextColor};
 							border-radius: 3px;
 							padding: 1px 2px;
 						}
-						.sh-short { 
-							background-color: ${this.settings.shortSentenceColor}; 
+						.sh-short {
+							background-color: ${this.settings.shortSentenceColor};
 							color: ${shortTextColor};
 							border-radius: 3px;
 							padding: 1px 2px;
 						}
-						.sh-medium { 
-							background-color: ${this.settings.mediumSentenceColor}; 
+						.sh-medium {
+							background-color: ${this.settings.mediumSentenceColor};
 							color: ${mediumTextColor};
 							border-radius: 3px;
 							padding: 1px 2px;
 						}
-						.sh-long { 
-							background-color: ${this.settings.longSentenceColor}; 
+						.sh-long {
+							background-color: ${this.settings.longSentenceColor};
 							color: ${longTextColor};
 							border-radius: 3px;
 							padding: 1px 2px;
 						}
-					`;
+					`
+					);
 				}
 
 				case SentenceMarkingStyle.TEXT_COLOR: {
-					return baseStyles + `
+					return (
+						baseStyles +
+						`
 						.sh-mini { color: ${this.settings.miniSentenceColor}; }
 						.sh-short { color: ${this.settings.shortSentenceColor}; }
 						.sh-medium { color: ${this.settings.mediumSentenceColor}; }
 						.sh-long { color: ${this.settings.longSentenceColor}; }
-					`;
+					`
+					);
 				}
 
 				case SentenceMarkingStyle.COLOR_UNDERLINING: {
-					return baseStyles + `
-						.sh-mini { 
+					return (
+						baseStyles +
+						`
+						.sh-mini {
 							text-decoration: underline;
 							text-decoration-color: ${this.settings.miniSentenceColor};
 							text-decoration-thickness: 2px;
 							text-underline-offset: 2px;
 						}
-						.sh-short { 
+						.sh-short {
 							text-decoration: underline;
 							text-decoration-color: ${this.settings.shortSentenceColor};
 							text-decoration-thickness: 2px;
 							text-underline-offset: 2px;
 						}
-						.sh-medium { 
+						.sh-medium {
 							text-decoration: underline;
 							text-decoration-color: ${this.settings.mediumSentenceColor};
 							text-decoration-thickness: 2px;
 							text-underline-offset: 2px;
 						}
-						.sh-long { 
+						.sh-long {
 							text-decoration: underline;
 							text-decoration-color: ${this.settings.longSentenceColor};
 							text-decoration-thickness: 2px;
 							text-underline-offset: 2px;
 						}
-					`;
+					`
+					);
 				}
 
 				default:
 					return baseStyles;
 			}
 		};
-		
+
 		style.textContent = generateSentenceStyles();
 		document.head.appendChild(style);
 	}
