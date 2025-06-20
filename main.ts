@@ -309,11 +309,6 @@ export default class MusicalTextPlugin extends Plugin {
 		this.refreshAllActiveHighlighting();
 	}
 
-	async saveSettings() {
-		await this.saveData(this.settings);
-		this.refreshAllActiveHighlighting(); // Update styles and refresh all active highlighting
-	}
-
 	private registerStyles() {
 		const existingStyle = document.getElementById(
 			"sentence-highlighter-styles",
