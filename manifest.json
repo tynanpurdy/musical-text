@@ -1,9 +1,9 @@
 {
 	"id": "musical-text-highlighter",
 	"name": "Musical Text",
-	"version": "1.0.0",
+	"version": "2.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Highlight sentences with color based on their length as you write.",
+	"description": "Color codes sentences by length to visualize prose rhythm",
 	"author": "Tynan Purdy",
 	"authorUrl": "https://tynanpurdy.com",
 	"fundingUrl": "https://buymeacoffee.com/tynanpurdy",
