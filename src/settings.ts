@@ -194,6 +194,32 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 						this.display();
 					});
 			});
+		new Setting(containerEl)
+			.setName("Show status bar icon")
+			.setDesc("Reload app to show changes")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showStatusBarItem ?? true)
+					.onChange(async (value) => {
+						this.plugin.settings.showStatusBarItem = value;
+						await this.plugin.saveSettings();
+						this.plugin.app.workspace.trigger("active-leaf-change");
+						this.display();
+					}),
+			);
+		new Setting(containerEl)
+			.setName("Show ribbon icon")
+			.setDesc("Reload app to show changes")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showRibbonIcon ?? true)
+					.onChange(async (value) => {
+						this.plugin.settings.showRibbonIcon = value;
+						await this.plugin.saveSettings();
+						this.plugin.app.workspace.trigger("active-leaf-change");
+						this.display();
+					}),
+			);
 		new Setting(containerEl).setName("Colors").setHeading();
 		new Setting(containerEl)
 			.setName("Mini sentence color")

@@ -26,6 +26,8 @@ export interface MusicalTextSettings {
 	mediumThreshold: number;
 	longThreshold: number;
 	defaultHighlightingEnabled: boolean;
+	showStatusBarItem?: boolean;
+	showRibbonIcon?: boolean;
 }
 
 /**

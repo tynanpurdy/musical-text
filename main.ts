@@ -96,29 +96,47 @@ export default class MusicalTextPlugin extends Plugin {
 	// This WeakMap holds the highlighting state (true/false) for each CodeMirror view.
 	editorHighlightingMap: WeakMap<EditorView, boolean>;
 
+	statusBarItem: HTMLElement | null = null;
+	ribbonIconEl: HTMLElement | null = null;
+
 	async onload() {
 		await this.loadSettings();
 		this.editorHighlightingMap = new WeakMap();
 
-		// Add a status bar item that reflects the state of the active editor.
-		const statusBarItem = this.addStatusBarItem();
-		this.updateStatusBar(statusBarItem);
-		statusBarItem.addClass("sentence-highlighter-status");
-		statusBarItem.addEventListener("click", () => {
-			this.toggleHighlighting(statusBarItem);
-		});
+		// Conditionally add a status bar item that reflects the state of the active editor.
+		if (this.settings.showStatusBarItem ?? true) {
+			this.statusBarItem = this.addStatusBarItem();
+			this.updateStatusBar(this.statusBarItem);
+			this.statusBarItem.addClass("sentence-highlighter-status");
+			this.statusBarItem.addEventListener("click", () => {
+				this.toggleHighlighting(this.statusBarItem as HTMLElement);
+			});
+		}
 
-		// Add a ribbon icon for mobile users to toggle sentence highlighting
-		this.addRibbonIcon("list-music", "Toggle sentence highlighting", () => {
-			this.toggleHighlighting(statusBarItem);
-		});
+		// Conditionally add a ribbon icon for mobile users to toggle sentence highlighting
+		if (this.settings.showRibbonIcon ?? true) {
+			this.ribbonIconEl = this.addRibbonIcon(
+				"list-music",
+				"Toggle sentence highlighting",
+				() => {
+					if (this.statusBarItem) {
+						this.toggleHighlighting(this.statusBarItem);
+					} else if (this.ribbonIconEl) {
+						this.toggleHighlighting(this.ribbonIconEl);
+					}
+				},
+			);
+		}
 
 		// Register a command to toggle highlighting in the active editor.
+		const statusElForCommand = this.statusBarItem || this.ribbonIconEl;
 		this.addCommand({
 			id: "toggle-sentence-highlighting",
-			name: "Toggle sentence highlighting",
+			name: "Toggle musical text highlighting",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				this.toggleHighlighting(statusBarItem);
+				if (statusElForCommand) {
+					this.toggleHighlighting(statusElForCommand);
+				}
 			},
 		});
 
@@ -137,7 +155,9 @@ export default class MusicalTextPlugin extends Plugin {
 			this.app.workspace.on("active-leaf-change", () => {
 				const activeView =
 					this.app.workspace.getActiveViewOfType(MarkdownView);
-				this.updateStatusBar(statusBarItem);
+				if (this.statusBarItem) {
+					this.updateStatusBar(this.statusBarItem);
+				}
 				if (activeView) {
 					const cm: EditorView = (activeView.editor as any).cm;
 					const enabled = this.editorHighlightingMap.get(cm) || false;
@@ -254,9 +274,8 @@ export default class MusicalTextPlugin extends Plugin {
 			? this.editorHighlightingMap.get(cm) || false
 			: false;
 
-		setTooltip(statusBarItem, "Toggle sentence highlighting", {
-			placement: "top",
-		});
+		// Use Obsidian's API for tooltip positioning instead of native title
+		setTooltip(statusBarItem, "Toggle sentence highlighting");
 
 		statusBarItem.toggleClass("is-active", enabled);
 	}
@@ -276,6 +295,18 @@ export default class MusicalTextPlugin extends Plugin {
 			DEFAULT_SETTINGS,
 			await this.loadData(),
 		);
+		// Apply default true if the new settings field is not set
+		if (this.settings.showStatusBarItem === undefined) {
+			this.settings.showStatusBarItem = true;
+		}
+		if (this.settings.showRibbonIcon === undefined) {
+			this.settings.showRibbonIcon = true;
+		}
+	}
+
+	async saveSettings() {
+		await this.saveData(this.settings);
+		this.refreshAllActiveHighlighting();
 	}
 
 	async saveSettings() {
