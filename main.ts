@@ -3,7 +3,7 @@
  * Provides sentence highlighting with customizable colors and styles.
  */
 
-import { Plugin, Editor, MarkdownView, setIcon } from "obsidian";
+import { Plugin, Editor, MarkdownView, setIcon, setTooltip } from "obsidian";
 import { EditorView, Decoration } from "@codemirror/view";
 import {
 	StateField,
@@ -108,10 +108,15 @@ export default class MusicalTextPlugin extends Plugin {
 			this.toggleHighlighting(statusBarItem);
 		});
 
+		// Add a ribbon icon for mobile users to toggle sentence highlighting
+		this.addRibbonIcon("list-music", "Toggle sentence highlighting", () => {
+			this.toggleHighlighting(statusBarItem);
+		});
+
 		// Register a command to toggle highlighting in the active editor.
 		this.addCommand({
 			id: "toggle-sentence-highlighting",
-			name: "Toggle musical text highlighting",
+			name: "Toggle sentence highlighting",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				this.toggleHighlighting(statusBarItem);
 			},
@@ -249,8 +254,10 @@ export default class MusicalTextPlugin extends Plugin {
 			? this.editorHighlightingMap.get(cm) || false
 			: false;
 
-		statusBarItem.title =
-			"Click to toggle sentence highlighting for this editor";
+		setTooltip(statusBarItem, "Toggle sentence highlighting", {
+			placement: "top",
+		});
+
 		statusBarItem.toggleClass("is-active", enabled);
 	}
 
