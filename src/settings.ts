@@ -176,25 +176,6 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 					});
 			});
 		new Setting(containerEl)
-			.setName("Color Palette")
-			.setDesc("Choose from popular code editor color schemes")
-			.addDropdown((dropdown) => {
-				Object.keys(COLOR_PALETTES).forEach((key) => {
-					dropdown.addOption(
-						key,
-						COLOR_PALETTES[key as keyof typeof COLOR_PALETTES].name,
-					);
-				});
-				dropdown
-					.setValue(this.plugin.settings.colorPalette)
-					.onChange(async (value) => {
-						this.plugin.settings.colorPalette = value;
-						this.applyPalette(value);
-						await this.plugin.saveSettings();
-						this.display();
-					});
-			});
-		new Setting(containerEl)
 			.setName("Show status bar icon")
 			.setDesc("Reload app to show changes")
 			.addToggle((toggle) =>
@@ -221,6 +202,25 @@ export class SentenceHighlighterSettingTab extends PluginSettingTab {
 					}),
 			);
 		new Setting(containerEl).setName("Colors").setHeading();
+		new Setting(containerEl)
+			.setName("Color Palette")
+			.setDesc("Choose from popular code editor color schemes")
+			.addDropdown((dropdown) => {
+				Object.keys(COLOR_PALETTES).forEach((key) => {
+					dropdown.addOption(
+						key,
+						COLOR_PALETTES[key as keyof typeof COLOR_PALETTES].name,
+					);
+				});
+				dropdown
+					.setValue(this.plugin.settings.colorPalette)
+					.onChange(async (value) => {
+						this.plugin.settings.colorPalette = value;
+						this.applyPalette(value);
+						await this.plugin.saveSettings();
+						this.display();
+					});
+			});
 		new Setting(containerEl)
 			.setName("Mini sentence color")
 			.setDesc("Color for very short sentences")
