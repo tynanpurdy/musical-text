@@ -33,7 +33,6 @@ export function computeDecorations(
 		if (listMarkerMatch) {
 			processedLine = listMarkerMatch.content;
 			processedLineOffset += listMarkerMatch.markerLength;
-			console.log(processedLine, currentOffset);
 		}
 
 		if (processedLine.length === 0) continue;
@@ -104,7 +103,7 @@ export function detectMarkdownListMarker(line: string): MarkdownListMarkerResult
 
 /** Counts words in a sentence using word boundary matching */
 export function countWords(sentence: string): number {
-	return (sentence.match(/\b\w+\b/g) || []).length;
+	return (sentence.match(/[A-Za-z]+(?:['’][A-Za-z]+)?/g) || []).length;
 }
 
 /** Returns CSS class for sentence based on word count and thresholds */
