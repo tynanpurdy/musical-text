@@ -12,7 +12,7 @@ When we write, we often forget text has rhythm. Poetry and music incorporate rhy
   - Text color
   - Color underlining
 - Automatic contrasting text colors that maintain hue for optimal readability (highlighting mode)
-- Toggle highlighting on/off with status bar button or command
+- Toggle highlighting on/off per editor with status bar button, ribbon, or command
 - Customizable sentence length thresholds
 - Customizable highlight colors
 
@@ -23,11 +23,17 @@ When we write, we often forget text has rhythm. Poetry and music incorporate rhy
 3. Start writing! Sentences will be automatically highlighted based on their length
 4. Toggle highlighting using:
    - The status bar button (sheet music icon)
+   - The ribbon button (same icon)
    - The command palette (`Cmd/Ctrl + P` → "Toggle musical text highlighting")
+5. Start writing! Sentences will be automatically highlighted based on their length
 
 ## Settings
 
 You can customize the plugin in Settings → Musical Text:
+
+- Choose a marking style between highlighting, underlining, and text color
+- Hide status bar button
+- Hide ribbon button
 
 - **Sentence Length Thresholds**
   - **Short**: 1 to (medium-1) words via slider (default: 5)
@@ -35,9 +41,8 @@ You can customize the plugin in Settings → Musical Text:
   - **Long**: Minimum of (medium+1) words via text input (default: 9)
 
 - **Colors**
+  - Select a premade palette from several popular code themes
   - Customize colors for each sentence length category
-  - Automatic contrasting text colors generated for optimal readability (highlighting mode)
-  - Colors maintain the same hue while ensuring proper contrast
 
 ## Markdown Support
 
