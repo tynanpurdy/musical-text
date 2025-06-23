@@ -44,7 +44,7 @@ export interface ColorPalette {
 /**
  * Result of markdown list marker detection
  */
-export interface MarkdownListMarkerResult {
+export interface MarkdownFilterResult {
 	content: string;
 	markerLength: number;
 }
