@@ -2,9 +2,16 @@
  * Sentence detection and markdown parsing for Musical Text highlighting
  */
 
+import winkNLP from 'wink-nlp';
+import { ItemSentence } from 'wink-nlp';
+import model from 'wink-eng-lite-web-model';
+
 import { RangeSet, RangeSetBuilder } from "@codemirror/state";
 import { Decoration } from "@codemirror/view";
-import { MusicalTextSettings, MarkdownListMarkerResult } from "./types";
+import { MusicalTextSettings, MarkdownFilterResult } from "./types";
+
+const nlp = winkNLP(model, ["sbd"]);
+const its = nlp.its;
 
 /**
  * Creates sentence highlighting decorations for text.
@@ -29,37 +36,36 @@ export function computeDecorations(
 		let processedLine = line;
 		let processedLineOffset = currentOffset;
 
-		const listMarkerMatch = detectMarkdownListMarker(line.trim());
+		const listMarkerMatch = detectMarkdownListMarker(line);
 		if (listMarkerMatch) {
 			processedLine = listMarkerMatch.content;
 			processedLineOffset += listMarkerMatch.markerLength;
 		}
 
-		if (processedLine.length === 0) continue;
-
-		const sentenceRegex = /([^.!?]*[.!?]+\s*|[^.!?\r\n]+(?=\r?\n|$))/g;
-		let match: RegExpExecArray | null;
-
-		while ((match = sentenceRegex.exec(processedLine)) !== null) {
-			const sentence = match[0];
-			const trimmedSentence = sentence.trim();
-
-			if (trimmedSentence.length === 0) continue;
-
-			const wordCount = countWords(trimmedSentence);
-			const className = getClassForSentence(wordCount, settings);
-
-			if (wordCount === 0) continue;
-
-			const sentenceStart = processedLineOffset + match.index + offset;
-			const leadingWhitespace = sentence.length - sentence.trimStart().length;
-			const contentStart = sentenceStart + leadingWhitespace;
-			const contentEnd = contentStart + trimmedSentence.length;
-
-			if (contentStart < contentEnd) {
-				builder.add(contentStart, contentEnd, Decoration.mark({ class: className }));
-			}
+		if (!processedLine || processedLine.length === 0) {
+			currentOffset += line.length;
+			continue;
 		}
+
+		const doc = nlp.readDoc(processedLine);
+		doc.sentences().each((x: ItemSentence) => {
+			const rawSentence: string = x.out();
+			if (!rawSentence) return;
+
+			const lineStart = processedLine.indexOf(rawSentence);
+			if (lineStart === -1) return;
+
+			const wordCount = x.tokens().filter(e => e.out(its.type) === 'word').length();
+			if (wordCount == 0) return;
+
+			const styleClass = getClassForSentence(wordCount, settings);
+
+			const sentenceStart = processedLineOffset + lineStart + offset;
+			const sentenceEnd = sentenceStart + rawSentence.trimEnd().length;
+			if (sentenceStart >= sentenceEnd) return;
+
+			builder.add(sentenceStart, sentenceEnd, Decoration.mark({ class: styleClass }));
+		});
 
 		currentOffset += line.length;
 	}
@@ -68,7 +74,7 @@ export function computeDecorations(
 }
 
 /** Detects markdown list markers and extracts content */
-export function detectMarkdownListMarker(line: string): MarkdownListMarkerResult | null {
+export function detectMarkdownListMarker(line: string): MarkdownFilterResult | null {
 	// Checkboxes (must be first to avoid conflict with unordered lists)
 	const checkboxMatch = line.match(/^(\s*[-*+]\s*\[[xX\s]\]\s*)(.*)$/);
 	if (checkboxMatch) {
@@ -95,6 +101,17 @@ export function detectMarkdownListMarker(line: string): MarkdownListMarkerResult
 		return {
 			content: unorderedMatch[2],
 			markerLength: unorderedMatch[1].length
+		};
+	}
+
+	// Block Quotes
+	const blockMatch = line.match(/^(?:>\s*)+(.+)$/);
+	if (blockMatch) {
+		const markerLength = blockMatch[0].length - blockMatch[1].length;
+
+		return {
+			content: blockMatch[1],
+			markerLength: markerLength
 		};
 	}
 
